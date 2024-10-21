@@ -1,0 +1,47 @@
+.events-section{
+    position: relative;
+    isolation: isolate;
+}
+
+
+.events-section .packs-bg {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    height: 50%;
+
+}
+
+.events-section .packs-bg:after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(rgb(8, 6, 32, .5), rgb(8, 6, 32, .5));
+
+}
+
+.events-section .bg-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.events-section .packs-bg .bar-img {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    background: linear-gradient(transparent, rgb(8, 6, 32) 90%);
+}
+
+
+
+
+.events-section .events-wrap{
+    margin: 7rem 0;
+}

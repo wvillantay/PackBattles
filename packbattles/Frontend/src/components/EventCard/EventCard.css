@@ -1,0 +1,52 @@
+.event-card .ev-img {
+    position: relative;
+}
+
+.event-card .ev-img span.label {
+    display: inline-block;
+    border-radius: 1rem;
+    background: linear-gradient(180deg, #A35BFF 0%, #811FFF 100%), #D9D9D9;
+    color: #FFF;
+    font-size: 1.4rem;
+    font-weight: 700;
+    padding: .7rem 1.5rem;
+    position: absolute;
+    right: 3rem;
+    bottom: -10px;
+    line-height: 1;
+}
+
+.event-card .ev-img img {
+    width: 100%;
+    border-radius: 2rem;
+    transition: .5s ease;
+}
+
+.event-card:hover .ev-img img {
+    scale: 1.03;
+}
+
+.event-card h4 {
+    color: #FFF;
+    font-size: 2rem;
+    font-style: normal;
+    font-weight: 600;
+    line-height: 150%;
+    margin: 1.5rem 0;
+    /* 30px */
+}
+
+.event-card .ev-btn {
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.11);
+    padding: 1.6rem 4.5rem;
+    color: #FFF;
+    font-size: 1.6rem;
+    font-weight: 500;
+    display: inline-block;
+    margin-top: 1.5rem;
+    transition: .5s ease;
+}
+.event-card .ev-btn:hover{
+    background-color: #811FFF;
+}

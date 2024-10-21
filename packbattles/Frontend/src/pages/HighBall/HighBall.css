@@ -1,0 +1,84 @@
+.high-ball {
+    position: relative;
+    isolation: isolate;
+}
+
+.high-ball .packs-bg {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+}
+
+.high-ball .packs-bg:after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(rgb(8, 6, 32, .5), rgb(8, 6, 32, .5));
+
+}
+
+.high-ball .bg-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.high-ball .packs-bg .bar-img {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    background: linear-gradient(transparent, rgb(8, 6, 32) 90%);
+}
+
+
+.high-ball .player-battle-card {
+    background: transparent;
+    backdrop-filter: blur(0px);
+    border: none;
+}
+
+.high-ball .vs-card .main-img {
+    width: 100%;
+}
+
+.high-ball .player-card {
+    height: 600px !important;
+}
+
+.high-ball .player-card .loader {
+    max-width: 225px;
+    min-height: 370px;
+    border-radius: 2rem;
+    border: 1px dashed rgba(255, 255, 255, 0.30);
+    background: rgba(33, 0, 75, 0.07);
+    box-shadow: 0px 20px 80px 0px rgba(7, 5, 35, 0.75);
+    backdrop-filter: blur(10px);
+    margin: auto;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.high-ball .player-card .loader img {
+    width: 100px;
+    animation: loading 2s infinite linear;
+}
+
+@keyframes loading {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}

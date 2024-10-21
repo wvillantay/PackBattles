@@ -1,0 +1,48 @@
+.footer {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    background: #150D33;
+    backdrop-filter: blur(10px);
+}
+
+.footer .container {
+    border-top: 1px solid rgba(255, 255, 255, 0.10);
+    padding: 3rem 1.5rem;
+}
+
+.footer .ft-logo img {
+    max-width: 200px;
+}
+
+.footer ul li {
+    list-style: none;
+    font-size: 1.6rem;
+    margin-bottom: 1.4rem;
+}
+
+.footer ul li a {
+    font-size: inherit;
+    color: #fff;
+    transition: .5s ease;
+}
+
+.footer ul li a:hover {
+    opacity: .7;
+}
+
+.footer .copyright {
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 2rem;
+}
+
+.footer .copyright p {
+    color: rgba(255, 255, 255, 0.23);
+    font-size: 1.6rem;
+    font-weight: 500;
+    margin: 0;
+}
+.footer .social-icon{
+    margin-top: 2rem;
+}
+.footer .social-icon ul li a{
+    font-size: 2rem;
+} 

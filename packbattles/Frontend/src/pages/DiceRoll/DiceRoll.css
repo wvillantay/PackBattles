@@ -1,0 +1,79 @@
+.dice-roll {
+    padding: 6rem;
+    position: relative;
+    isolation: isolate;
+}
+
+.dice-roll .packs-bg {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    height: 90%;
+    z-index: -1;
+}
+
+.dice-roll .packs-bg:after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(rgb(8, 6, 32, .5), rgb(8, 6, 32, .5));
+
+}
+
+.dice-roll .bg-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.dice-roll .packs-bg .bar-img {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    background: linear-gradient(transparent, rgb(8, 6, 32) 90%);
+}
+
+
+.dice-roll .player-battle-card {
+    background: transparent;
+    backdrop-filter: blur(0px);
+    border: none;
+}
+
+.dice-roll .vs-card .main-img {
+    width: 100%;
+}
+
+.dice-roll .player-card {
+    min-height: 500px !important;
+}
+
+.dice-roll .players-vs{
+    margin: 0;
+}
+.dice-roll .players-vs .vs-card {
+    max-width: 300px;
+    border-radius: 2.4rem;
+    border: 1.213px solid rgba(255, 255, 255, 0.15);
+    background: rgba(33, 0, 75, 0.07);
+    box-shadow: 0px 24.258px 98.246px 0px rgba(7, 5, 35, 0.75);
+    backdrop-filter: blur(12.129186630249023px);
+}
+
+.dice-roll .players-vs .vs-card .player-battle-card2 {
+    max-width: 60%;
+    margin: 0 auto;
+    background-color: transparent !important;
+    backdrop-filter: blur(0px);
+    border-radius: 0 !important;
+}
+
+.dice-roll .players-vs .vs-card .player-battle-card2 img {
+    width: 100%;
+}

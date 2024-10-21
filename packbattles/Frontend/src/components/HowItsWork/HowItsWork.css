@@ -1,0 +1,59 @@
+.how-its-work {
+    padding: 6rem 0;
+}
+
+
+.work-steps {
+    padding-top: 5rem;
+}
+
+
+.work-steps .work-step {
+    position: relative;
+    isolation: isolate;
+    padding-right: 10px;
+}
+
+.work-steps .work-step.line-none:after {
+    display: none;
+}
+
+.work-step:after {
+    content: "";
+    position: absolute;
+    top: 35px;
+    width: 100%;
+    border-bottom: 1px dotted #A35BFF;
+    z-index: -1;
+}
+
+.work-steps .work-step .step-count {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(29, 18, 63, 1);
+    margin-bottom: 3rem;
+
+}
+
+.work-steps .work-step .step-count h3 {
+    color: #A35BFF;
+    font-size: 3rem;
+}
+
+@media (max-width: 575px) {
+    .work-step:after {
+
+        top: 30px;
+ 
+    }
+
+    .work-steps .work-step .step-count {
+        width: 60px;
+        height: 60px;
+
+    }
+}

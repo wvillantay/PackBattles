@@ -1,0 +1,87 @@
+#header{
+    /* overflow: hidden; */
+    border-bottom: 1px solid #21004B;
+    /* background: linear-gradient(to right , #21004B, #21004B), url("../../assets/img/image 3.png"); */
+    background-position: center top;
+    backdrop-filter: blur(5px) ;
+    background-color: transparent;
+    padding: 1rem 0;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    width: 100%;
+}
+#header .headerNav .logo{
+    width: 200px;
+    margin-right: 3rem;
+    
+}
+
+#topNav ul li a{
+    font-size: 1.6rem;
+    color: #fff;
+    display: inline-block;
+    padding: 1rem 1.5rem;
+    text-decoration: none;
+    font-weight: 400;
+    transition: 0.4s ease;
+}
+
+#topNav ul li a:is(:hover, .active){
+    opacity: .7;
+}
+
+#topNav .header-buttons a{
+    background: #292641;
+    font-size: 1.6rem;
+    font-weight: 500;
+    color: #fff;
+    padding: 1.2rem 2.8rem;
+    border-radius: 1.5rem;
+    box-shadow: 0 4px 4px 0 #111;
+}
+#topNav .header-buttons a:hover,
+#topNav .header-buttons a.signup-btn{
+    background: linear-gradient(to bottom, #A35BFF, #811FFF) ;
+}
+
+.toggler{
+    all: unset;
+    color: #fff;
+    opacity: 1;
+    font-size: 3rem;
+}
+.closeNav{
+    all: unset;
+    position: absolute;
+    right: 15px;
+    top: 10px;
+    color: #fff;
+    font-size: 2.4rem;
+}
+
+@media screen and (max-width: 991px) {
+    
+    #topNav{
+        /* display: block; */
+        position: fixed;
+        top: 0;
+        left: 0;
+        transform: translateX(-110%);
+        max-width: 250px;
+        height: 100vh;
+        z-index: 10000;
+        background-color: #21004B;
+        box-shadow: 4px 0px 10px 0px #3333;
+        padding: 1.5rem ;
+        transition: .5s ease;
+        padding-top: 50px;
+    }
+
+    #topNav.nav-active{
+        transform: translateX(0%);
+
+    }
+    
+}

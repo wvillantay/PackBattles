@@ -1,0 +1,149 @@
+.upgrade {
+    position: relative;
+    padding: 6rem 0;
+    isolation: isolate;
+}
+
+
+
+.upgrade .packs-bg {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+
+}
+
+.upgrade .packs-bg:after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(rgb(8, 6, 32, .6), rgb(8, 6, 32, .6));
+
+}
+
+.upgrade .bg-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.upgrade .packs-bg .bar-img {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    background: linear-gradient(transparent, rgb(8, 6, 32) 90%);
+}
+
+
+.upgrade .select-box {
+    border-radius: 2rem;
+    border: 1px dashed rgba(255, 255, 255, 0.30);
+    background: rgba(33, 0, 75, 0.07);
+    box-shadow: 0px 20px 80px 0px rgba(7, 5, 35, 0.75);
+    backdrop-filter: blur(10px);
+    text-align: center;
+    height: 400px;
+    max-width: 350px;
+    margin: 1.5rem auto;
+}
+
+.upgrade .select-box .box-content {
+    max-width: 180px;
+}
+
+.upgrade .select-box .box-content .plus-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    margin: 3rem auto;
+    background: rgba(33, 0, 75, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    filter: drop-shadow(0px 20px 80px rgba(7, 5, 35, 0.75));
+    backdrop-filter: blur(10px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 2.4rem;
+    color: #fff;
+}
+
+
+.upgrade .updrade-btns {
+    margin: 1.5rem auto;
+    display: flex;
+    gap: 10px;
+    max-width: 350px;
+
+}
+
+.upgrade .updrade-btns button {
+    all: unset;
+    display: block;
+    flex-basis: 50%;
+    border-radius: 40px;
+    border: 1px solid #432970;
+    background: rgba(163, 91, 255, 0.14);
+    box-shadow: 0px 4px 20px 0px rgba(163, 91, 255, 0.12) inset;
+    color: #FFF;
+    font-size: 1.6rem;
+    font-style: normal;
+    font-weight: 400;
+    text-align: center;
+    box-sizing: border-box;
+    padding: .8rem 1rem;
+    cursor: pointer;
+
+}
+
+.upgrade .updrade-btns button.btn-full {
+    min-width: 100% !important;
+}
+
+.u-x-btn button.active,
+.upgrade .updrade-btns button.active {
+    color: #fff;
+    background: linear-gradient(180deg, #A35BFF 0%, #811FFF 100%);
+}
+
+.upgrade .u-cards {
+    max-width: 350px;
+    margin: auto;
+}
+
+.upgrade .u-cards .u-card {
+    border-radius: 5px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(33, 0, 75, 0.07);
+    box-shadow: 0px 16px 65px 0px rgba(7, 5, 35, 0.75);
+    backdrop-filter: blur(8px);
+}
+
+
+.u-x-btn {
+    max-width: 350px;
+    display: flex;
+    gap: 10px;
+    margin: auto;
+
+}
+
+.u-x-btn button {
+    width: calc(100% / 5);
+    border-radius: 8px;
+    border: 1px solid #432970;
+    background: rgba(163, 91, 255, 0.14);
+    box-shadow: 0px 4px 20px 0px rgba(163, 91, 255, 0.12) inset;
+    padding: 1rem 1.2rem;
+    color: #FFF;
+    text-align: center;
+    font-size: 1.6rem;
+    font-weight: 400;
+}

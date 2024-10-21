@@ -1,0 +1,274 @@
+/* POPPINS FONTS */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Poppins", sans-serif;
+}
+
+html {
+  font-size: 62.5%;
+}
+
+
+body {
+  background: #080620;
+  padding-top: 70px;
+}
+
+#root {
+  overflow: hidden !important;
+
+}
+
+a,
+a:hover {
+  text-decoration: none !important;
+}
+
+a,
+button {
+  font-size: 1.8rem;
+}
+
+h2 {
+  color: #FFF;
+  font-size: 4rem;
+  font-weight: 600;
+  /* 58.809px */
+}
+
+h3 {
+  color: #FFF;
+  font-size: 3.6rem;
+  font-style: normal;
+  font-weight: 800;
+  margin: 0;
+}
+
+h4 {
+  color: #FFF;
+  font-size: 2rem;
+  font-weight: 600;
+
+}
+
+h5 {
+  color: #FFF;
+  font-family: Poppins;
+  font-size: 1.8rem;
+  font-weight: 500;
+}
+
+h6 {
+  color: #FFF;
+  font-size: 1.8rem;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 150%;
+  /* 27px */
+}
+
+p {
+  color: #FFF;
+  font-size: 1.8rem;
+  font-weight: 400;
+  line-height: 150%;
+  /* 27px */
+}
+
+@media screen and (max-width: 991px) {
+  html {
+    font-size: 50%;
+
+  }
+}
+
+
+@media (max-width: 575px) {
+  html {
+    font-size: 45%;
+
+  }
+}
+
+.m-btn {
+  all: unset;
+  border-radius: 2rem;
+  background: linear-gradient(180deg, #A35BFF 0%, #811FFF 100%);
+  color: #FFF;
+  font-family: Poppins;
+  font-size: 1.6rem;
+  font-style: normal;
+  font-weight: 500;
+  line-height: normal;
+  padding: 1.5rem;
+}
+
+
+/* SEARCH CONTAINER SECTION */
+
+.search-container {
+  padding: 2rem 1.5rem;
+}
+
+.search-container .search .input-wrap {
+  position: relative;
+}
+
+.search-container .search {
+  width: 40%;
+  max-width: 350px;
+
+}
+
+.search-container .search .input-wrap .search-icon {
+  position: absolute;
+  top: 50%;
+  left: 25px;
+  transform: translateY(-50%);
+  font-size: 2.3rem;
+  color: rgba(117, 114, 148, 1);
+  pointer-events: none;
+}
+
+.search-container .search .input-wrap input {
+  border-radius: 2rem;
+  border: 1px solid rgba(117, 114, 148, 1);
+  background: rgba(33, 0, 75, 0.07);
+  box-shadow: 0px 20px 80px 0px rgba(7, 5, 35, 0.75);
+  backdrop-filter: blur(10px);
+  color: rgba(117, 114, 148, 1);
+  outline: none;
+  font-size: 1.6rem;
+  font-style: normal;
+  font-weight: 400;
+  width: 100%;
+  height: 5.5rem;
+  padding: 1.5rem;
+  padding-left: 60px;
+}
+
+.search-container .search .input-wrap input::placeholder {
+  color: rgba(117, 114, 148, 1);
+
+}
+
+.search-container .sort {
+  display: flex;
+  align-items: center;
+}
+
+.search-container .sort label {
+  color: #757294;
+  font-size: 1.6rem;
+  font-weight: 500;
+}
+
+.search-container .sort .sbp {
+  all: unset;
+  cursor: pointer;
+  width: 20px;
+}
+
+.search-container .sort .sbp img {
+  width: 20px;
+  margin-left: 10px;
+}
+
+.search-container .fil-input {
+  all: unset;
+}
+
+.search-container .fil-input,
+.search-container .sort select {
+  border-radius: 2rem;
+  background: rgba(255, 255, 255, 0.11);
+  color: #FFF;
+  font-size: 1.6rem;
+  font-style: normal;
+  font-weight: 500;
+  line-height: normal;
+  padding: 1.5rem;
+  width: 140px;
+  margin-left: 10px;
+  outline: none;
+  border: none;
+}
+
+.search-container .sort select option {
+  background-color: #757294;
+}
+
+@media (max-width: 991px) {
+  .search-container .search {
+    width: 30%;
+
+  }
+
+  .search-container .fil-input,
+  .search-container .sort select {
+    padding: 1.5rem 1rem;
+    width: 100px;
+
+  }
+}
+
+@media (max-width: 767px) {
+  .search-container .search {
+    width: 30%;
+    min-width: 150px;
+
+  }
+
+  .search-container .search .input-wrap input {
+    padding-left: 30px;
+  }
+
+  .search-container .search .input-wrap .search-icon {
+    left: 10px;
+  }
+
+  .search-container .fil-input,
+  .search-container .sort select {
+    padding: 1.5rem 1rem;
+    width: 100px;
+
+  }
+
+  .search-container .fil-input {
+    width: 50px;
+  }
+}
+
+@media (max-width: 575px) {
+  .search-container .search {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 150px;
+    margin-bottom: 1rem;
+  }
+
+  .search-container .search .input-wrap input {
+    padding-left: 30px;
+  }
+
+  .search-container .search .input-wrap .search-icon {
+    left: 10px;
+  }
+
+  .search-container .fil-input,
+  .search-container .sort select {
+    padding: 1.5rem 1rem;
+    width: 100px;
+
+  }
+
+  .search-container .fil-input {
+    width: 50px;
+  }
+}
+
+/* SEARCH CONTAINER SECTION END */

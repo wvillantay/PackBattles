@@ -1,0 +1,156 @@
+.packs {
+    padding: 8rem 0;
+    position: relative;
+    /* isolation: isolate; */
+}
+
+.packs .packs-bg {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    height: 50%;
+
+}
+
+.packs .packs-bg:after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(rgb(8, 6, 32, .6), rgb(8, 6, 32, .6));
+
+}
+
+.packs .bg-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.packs .packs-bg .bar-img {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    background: linear-gradient(transparent, rgb(8, 6, 32) 90%);
+}
+
+.packs .search-container {
+    margin: 4rem 0;
+}
+
+.packs .search-container .search .input-wrap {
+    position: relative;
+}
+
+.packs .search-container .search {
+    width: 40%;
+    max-width: 350px;
+
+}
+
+.packs .search-container .search .input-wrap .search-icon {
+    position: absolute;
+    top: 50%;
+    left: 25px;
+    transform: translateY(-50%);
+    font-size: 2.3rem;
+    color: rgba(117, 114, 148, 1);
+    pointer-events: none;
+}
+
+.packs .search-container .search .input-wrap input {
+    border-radius: 2rem;
+    border: 1px solid rgba(117, 114, 148, 1);
+    background: rgba(33, 0, 75, 0.07);
+    box-shadow: 0px 20px 80px 0px rgba(7, 5, 35, 0.75);
+    backdrop-filter: blur(10px);
+    color: rgba(117, 114, 148, 1);
+    outline: none;
+    font-size: 1.6rem;
+    font-style: normal;
+    font-weight: 400;
+    width: 100%;
+    height: 5.5rem;
+    padding: 1.5rem;
+    padding-left: 60px;
+}
+
+.packs .search-container .search .input-wrap input::placeholder {
+    color: rgba(117, 114, 148, 1);
+
+}
+
+
+.packs .search-container .sort label {
+    color: #757294;
+    font-size: 1.6rem;
+    font-weight: 500;
+}
+
+.packs .search-container .sort select {
+    border-radius: 2rem;
+    background: rgba(255, 255, 255, 0.11);
+    color: #FFF;
+    font-size: 1.6rem;
+    font-style: normal;
+    font-weight: 500;
+    line-height: normal;
+    padding: 1.5rem;
+    width: 140px;
+    margin-left: 10px;
+    outline: none;
+}
+
+.packs .search-container .sort select option {
+    background-color: #757294;
+}
+
+.packs .pack-cards {
+    margin: 9rem 0;
+}
+
+#load-btn {
+    all: unset;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.11);
+    color: #FFF;
+    font-size: 1.6rem;
+    font-style: normal;
+    font-weight: 600;
+    padding: 1.5rem 2.5rem;
+    cursor: pointer;
+    transition: .5s ease;
+}
+
+#load-btn:hover {
+    background-color: #757294;
+}
+
+@media (max-width: 575px) {
+
+    .packs .search-container .search .input-wrap input {
+        padding-left: 30px;
+    }
+
+    .packs .search-container .search .input-wrap .search-icon {
+        position: absolute;
+        top: 50%;
+        left: 10px;
+        transform: translateY(-50%);
+        font-size: 2.3rem;
+        color: rgba(117, 114, 148, 1);
+        pointer-events: none;
+    }
+
+    .packs .search-container .sort select {
+        padding: 1.5rem .5rem;
+        width: 100px;
+    }
+
+
+}

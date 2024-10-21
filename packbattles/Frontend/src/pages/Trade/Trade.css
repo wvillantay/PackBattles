@@ -1,0 +1,227 @@
+.trade {
+    position: relative;
+    padding: 6rem 0;
+    isolation: isolate;
+}
+
+
+
+.trade .packs-bg {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+
+}
+
+.trade .packs-bg:after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(rgb(8, 6, 32, .6), rgb(8, 6, 32, .6));
+
+}
+
+.trade .bg-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.trade .packs-bg .bar-img {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    background: linear-gradient(transparent, rgb(8, 6, 32) 90%);
+}
+
+
+.trade .select-box {
+    border-radius: 2rem;
+    border: 1px dashed rgba(255, 255, 255, 0.30);
+    background: rgba(33, 0, 75, 0.07);
+    box-shadow: 0px 20px 80px 0px rgba(7, 5, 35, 0.75);
+    backdrop-filter: blur(10px);
+    text-align: center;
+    height: 400px;
+    max-width: 350px;
+    padding: 1.5rem 1.3rem;
+    margin: 1.5rem auto;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+    .trade .select-box {
+        height: 300px;
+    }
+}
+
+.trade .select-box .img-wrap {
+    height: 100%;
+    border-radius: 2rem;
+    overflow: hidden;
+}
+
+.trade .select-box .img-wrap img {
+    width: 100%;
+    object-fit: cover;
+    height: 100%;
+    background-color: red;
+}
+
+.trade .select-box .box-content {
+    max-width: 180px;
+}
+
+.trade .select-box .box-content .plus-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    margin: 3rem auto;
+    background: rgba(33, 0, 75, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    filter: drop-shadow(0px 20px 80px rgba(7, 5, 35, 0.75));
+    backdrop-filter: blur(10px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 2.4rem;
+    color: #fff;
+}
+
+
+
+.trade-btn {
+    all: unset;
+    border-radius: 2rem;
+    background: linear-gradient(180deg, #A35BFF 0%, #811FFF 100%);
+    color: #FFF;
+    font-size: 1.6rem;
+    font-weight: 700;
+    padding: 1.6rem 4rem;
+    cursor: pointer;
+    display: inline-block;
+    margin: 1.5rem auto;
+}
+
+/*
+=============================================
+    TRADE IDEAL CARDS SECTION START
+=============================================
+*/
+.ideal-card-wrap {
+    margin: 5rem 0;
+}
+
+.ideal-card-wrap .ideal-card-container {
+    border-radius: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(33, 0, 75, 0.07);
+    box-shadow: 0px 20px 80px 0px rgba(7, 5, 35, 0.75);
+    backdrop-filter: blur(10px);
+}
+
+
+.ideal-card-wrap .ideal-card-container .search-container {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 2rem 1.5rem;
+    /* padding-top: 0; */
+}
+
+.ideal-card-container .ideal-card {
+    max-width: 310px;
+    margin: 10rem auto;
+    position: relative;
+}
+
+.ideal-card-container .ideal-card .line-top {
+    position: absolute;
+    top: -60px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 130%;
+    z-index: -1;
+
+}
+
+.ideal-card-container .ideal-card .line-down {
+    position: absolute;
+    bottom: -70px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 130%;
+    z-index: -1;
+
+}
+
+.ideal-card-container .ideal-card h3 {
+    font-weight: 600;
+    margin-top: 1.5rem;
+}
+
+.ideal-card-container .ideal-card-img {
+    border-radius: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(33, 0, 75, 0.07);
+    box-shadow: 0px 20px 81px 0px rgba(7, 5, 35, 0.75);
+    backdrop-filter: blur(10px);
+    padding: 1rem;
+}
+
+.ideal-card-container .ideal-card-img img {
+    border-radius: 1.5rem;
+    width: 100%;
+}
+
+.ideal-card-container .ideal-sm-card .ideal-card-img {
+    border-radius: .5rem;
+    margin-bottom: 1rem;
+}
+
+.ideal-card-container .ideal-sm-card .ideal-card-img img {
+    border-radius: .5rem;
+}
+
+
+.ideal-card-container .ideal-sm-card a {
+    display: inline-block;
+    color: #A35BFF;
+    font-size: 1.8rem;
+    font-style: normal;
+    font-weight: 600;
+    line-height: 150%;
+    padding: .5rem 2.5rem;
+    border-radius: 40rem;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(33, 0, 75, 0.07);
+    box-shadow: 0px 20px 80px 0px rgba(7, 5, 35, 0.75);
+    backdrop-filter: blur(10px);
+    transition: .5s ease;
+}
+
+.ideal-card-container .ideal-sm-card a:hover {
+    color: #fff;
+    background-color: #A35BFF;
+}
+
+
+@media (max-width: 575px) {
+    .ideal-card-container .ideal-card {
+        max-width: 250px;
+        margin: 10rem auto;
+        position: relative;
+    }
+}
+
+
+/*
+=============================================
+    TRADE IDEAL CARDS SECTION END
+=============================================
+*/

@@ -1,0 +1,12 @@
+.section-header {
+    padding: 2rem 1.5rem;
+    background: #080620;
+}
+
+.section-header h2{
+    color: #FFF;
+    font-size: 4rem;
+    font-style: normal;
+    font-weight: 800;
+    line-height: 147.023%;
+}

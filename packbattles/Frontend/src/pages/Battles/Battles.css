@@ -1,0 +1,312 @@
+.battles {
+    position: relative;
+    padding: 6rem 0;
+    isolation: isolate;
+}
+
+/* BG */
+
+.battles .packs-bg {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    height: 50%;
+    z-index: -1;
+
+}
+
+.battles .packs-bg:after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(rgb(8, 6, 32, .5), rgb(8, 6, 32, .5));
+
+}
+
+.battles .bg-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.battles .packs-bg .bar-img {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    background: linear-gradient(transparent, rgb(8, 6, 32) 90%);
+}
+
+/* BG END */
+
+
+/* 
+=======================================
+    TABS SECTION START
+=======================================
+*/
+.tabs {
+    margin: 5rem 0;
+}
+
+.tabs ul {
+    display: flex;
+    justify-content: stretch;
+    flex-wrap: wrap;
+    padding: 0;
+}
+
+.tabs ul li {
+    flex-grow: 1;
+    list-style: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+
+}
+
+.tabs ul li button {
+    all: unset;
+    display: block;
+    width: 100%;
+    cursor: pointer;
+    color: #FFF;
+    font-size: 1.6rem;
+    font-weight: 400;
+    padding: 1.4rem 0;
+    text-align: center;
+    position: relative;
+}
+
+.tabs ul li button:hover,
+.tabs ul li button.active {
+    background: linear-gradient(180deg, #A35BFF 0%, #811FFF 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.tabs ul li button.active:after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+
+    border-bottom: 3px solid #A35BFF;
+}
+
+@media (max-width: 767px) {
+    .tabs ul li button {
+        font-size: 1.4rem;
+        padding: 1.4rem .5rem;
+
+    }
+
+}
+
+/* 
+=======================================
+    TABS SECTION END
+=======================================
+*/
+
+/* TABLE SECTION START */
+.battle-table table {
+    border-collapse: separate;
+    border-spacing:0 15px;
+}
+
+.battle-table table tr td,
+.battle-table table tr th {
+    background: transparent !important;
+    border: none;
+}
+
+.battle-table table tr {
+    position: relative;
+    isolation: isolate;
+}
+
+.battle-table table tbody tr::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background-color: rgba(33, 0, 75, 0.07);
+    border-radius: 2rem;
+    backdrop-filter: blur(10px);
+    z-index: -1;
+}
+
+.battle-table table thead th {
+    color: rgba(117, 114, 148, 0.51);
+    font-family: Poppins;
+    font-size: 1.3rem;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 173.9%;
+    /* 22.607px */
+    letter-spacing: 1.495px;
+    text-transform: uppercase;
+}
+
+
+
+
+
+.battle-table table tbody tr td:first-child {
+    padding: 1.5rem;
+
+}
+
+.battle-table table tbody tr td {
+    padding: 1rem;
+
+}
+
+
+
+
+.battle-table table tbody td span,
+.battle-table table tbody td p {
+    color: #757294;
+    font-family: Poppins;
+    font-size: 16px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 120%;
+    /* 19.2px */
+}
+
+.battle-table table tbody td p.round {
+    color: #811FFF;
+}
+
+.battle-table table tbody td p {
+    padding-top: 4rem;
+    white-space: nowrap;
+}
+
+.battle-table table tbody td span {
+    color: #757294;
+    font-size: 1.3rem;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 120%;
+    /* 15.6px */
+}
+
+.battle-table table tbody td .bt-card {
+    border-radius: 5px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(33, 0, 75, 0.07);
+    box-shadow: 0px 16px 65px 0px rgba(7, 5, 35, 0.75);
+    backdrop-filter: blur(8px);
+    padding: .3rem;
+    max-width: 65px;
+    min-width: 40px;
+}
+
+.battle-table table tbody td .bt-card img {
+    border-radius: .5rem;
+    width: 100%;
+}
+
+.battle-table table tbody td .player {
+    position: relative;
+    display: flex;
+    margin-top: 40px;
+}
+
+.battle-table table tbody td .player span {
+    position: absolute;
+    top: -25px;
+    left: 24px;
+}
+
+.battle-table table tbody td .player .user {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    overflow: hidden;
+}
+
+.battle-table table tbody td .player .user2 {
+    transform: translateX(-5px);
+}
+
+.battle-table table tbody td .player .user img {
+    width: 100%;
+}
+
+.battle-table table tbody td .act-btns {
+    display: grid;
+    height: 100%;
+    gap: 10px;
+    padding-right: 10px;
+}
+
+.battle-table table tbody td .act-btns button.join {
+    background: linear-gradient(180deg, #A35BFF 0%, #811FFF 100%);
+}
+
+.battle-table table tbody td .act-btns button:hover {
+    background: linear-gradient(260deg, #A35BFF 0%, #811FFF 100%);
+
+}
+
+.battle-table table tbody td .act-btns button {
+    all: unset;
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.11);
+    color: #FFF;
+    font-size: 1.3rem;
+    font-weight: 500;
+    line-height: 232.9%;
+    text-align: center;
+    padding: .7rem 1rem;
+    /* 30.277px */
+    cursor: pointer;
+}
+
+@media (max-width: 767px) {
+
+    .battle-table table tbody td .player span {
+        position: absolute;
+        top: -15px;
+        left: 24px;
+    }
+
+
+    .battle-table table tbody td p {
+        padding-top: 2rem;
+        white-space: nowrap;
+    }
+
+    .battle-table table tbody td .player {
+        margin-top: 20px;
+    }
+
+
+    .battle-table table tbody td .act-btns {
+
+        gap: 5px;
+    }
+
+    .battle-table table tbody td .act-btns button {
+
+        font-size: 1.3rem;
+        padding: .0rem 1rem;
+    }
+}
+
+
+
+/* TABLE SECTION END */

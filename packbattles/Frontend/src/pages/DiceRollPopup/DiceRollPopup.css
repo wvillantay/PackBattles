@@ -1,0 +1,72 @@
+/* MODAL POPUP START */
+.dice-roll-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    height: 100vh;
+    background: rgba(8, 6, 32, 0.40);
+    backdrop-filter: blur(6px);
+    z-index: 10000;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.dice-roll-popup .battle-popup {
+    border-radius: 2.4rem;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: #080620;
+    box-shadow: 0px 24.258px 98.246px 0px rgba(7, 5, 35, 0.75);
+    backdrop-filter: blur(12.129186630249023px);
+     width: 800px;
+    padding-top: 1rem;
+    overflow: auto;
+    max-height: 98vh;
+}
+
+.dice-roll-popup .battle-popup h2 {
+    font-size: 3.5rem;
+}
+
+.dice-roll-popup .battle-popup .popup-bottom {
+    padding: 3rem 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    margin-top: 4rem;
+}
+
+.dice-roll-popup .battle-popup .popup-bottom a {
+    border-radius: 2rem;
+    background: rgba(255, 255, 255, 0.11);
+    color: #A35BFF;
+    font-size: 1.6rem;
+    font-style: normal;
+    font-weight: 500;
+    line-height: 143.523%;
+    text-transform: capitalize;
+    padding: 1.6rem 4rem;
+}
+
+.dice-roll-popup .battle-popup .popup-bottom a.new {
+    color: #fff;
+    background: linear-gradient(180deg, #A35BFF 0%, #811FFF 100%);
+}
+
+
+.dice-roll-popup .battle-popup .popup-bottom a:hover {
+    color: #fff;
+    background: linear-gradient(280deg, #A35BFF 0%, #811FFF 100%);
+
+}
+
+
+.dice-roll-popup .vs-card {
+    max-width: 160px !important;
+}
+.dice-roll-popup .player-battle-card2 img {
+    width: 60%;
+}
+/* MODAL POPUP END */

@@ -1,0 +1,212 @@
+.king-of-the-hill {
+    padding: 6rem 0;
+    position: relative;
+    isolation: isolate;
+}
+
+
+.king-of-the-hill .packs-bg {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    height: 90%;
+    z-index: -1;
+}
+
+.king-of-the-hill .packs-bg:after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(rgb(8, 6, 32, .5), rgb(8, 6, 32, .5));
+
+}
+
+.king-of-the-hill .bg-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.king-of-the-hill .packs-bg .bar-img {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    background: linear-gradient(transparent, rgb(8, 6, 32) 90%);
+}
+
+
+/* PLAYER CARD */
+
+.king-of-the-hill .player {
+    margin: 10rem 0;
+}
+
+.king-of-the-hill .player .player-card-outer {
+    max-width: 370px;
+
+}
+
+
+.king-of-the-hill .player .player-card-outer .player-card {
+    border-radius: 2.4rem;
+    min-height: 400px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(33, 0, 75, 0.07);
+    box-shadow: 0px 24.258px 98.246px 0px rgba(7, 5, 35, 0.75);
+    backdrop-filter: blur(12.129186630249023px);
+}
+
+.king-of-the-hill .player-name {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    ;
+}
+
+.king-of-the-hill .player-card-pack {
+    padding: 1.5rem 1rem;
+    min-height: 320px !important;
+}
+
+.king-of-the-hill .player-battle-card {
+    border-radius: 1.4rem;
+    border: 0.734px solid rgba(255, 255, 255, 0.15);
+    background: rgba(33, 0, 75, 0.07);
+    box-shadow: 0px 14.689px 59.49px 0px rgba(7, 5, 35, 0.75);
+    backdrop-filter: blur(7.3444976806640625px);
+    max-width: 220px;
+    margin: auto;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+}
+
+.king-of-the-hill .player-battle-card img {
+    width: 100%;
+}
+
+.king-of-the-hill .king-of-the-hill .player-battle-btn {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 1.5rem;
+}
+
+.king-of-the-hill .king-of-the-hill .player-battle-btn button {
+    all: unset;
+    display: inline-block;
+    color: #A35BFF;
+    font-size: 1.8rem;
+    font-style: normal;
+    font-weight: 600;
+    line-height: 150%;
+    padding: 0.5rem 2.5rem;
+    border-radius: 40rem;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(33, 0, 75, 0.07);
+    box-shadow: 0px 20px 80px 0px rgba(7, 5, 35, 0.75);
+    backdrop-filter: blur(10px);
+    transition: .5s ease;
+
+}
+
+.king-of-the-hill .player-battles-cards {
+    width: 100%;
+    margin: 1rem auto;
+}
+
+.king-of-the-hill .player-battles-cards .item {
+    width: calc(100% / 5);
+    margin: 0 .3rem;
+
+}
+
+
+.king-of-the-hill .player-battles-cards .item:first-child {
+    margin-left: 0;
+}
+
+.king-of-the-hill .player-battles-cards .item:last-child {
+    margin-right: 0;
+}
+
+.king-of-the-hill .players-vs {
+    margin: 10rem 0;
+}
+
+.players-vs h2 {
+    font-size: 4.8rem;
+    font-weight: 900;
+    background: var(--cta, linear-gradient(180deg, #A35BFF 0%, #811FFF 100%));
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.king-of-the-hill .players-vs .vs-card {
+    margin: 2rem auto;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background-color: #3b176928;
+    backdrop-filter: blur(20px);
+    max-width: 200px;
+    border-radius: 1rem;
+    padding: 1.5rem;
+
+}
+
+.king-of-the-hill .players-vs .vs-card img {
+    width: 50px;
+    margin-bottom: 1rem;
+}
+
+.king-of-the-hill .players-vs .vs-card span {
+    color: #757294;
+    font-family: Poppins;
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 150%;
+    /* 21px */
+}
+.king-of-the-hill .king-player-battle-card{
+    max-width: 180px ;
+    margin: 2rem auto;
+
+}
+.king-of-the-hill .king-player-battle-card img{
+    width: 100%;
+}
+
+
+
+.king-of-the-hill .player-battle-btn {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 1.5rem;
+}
+
+.king-of-the-hill .player-battle-btn button {
+    all: unset;
+    display: inline-block;
+    color: #A35BFF;
+    font-size: 1.8rem;
+    font-style: normal;
+    font-weight: 600;
+    line-height: 150%;
+    padding: 0.5rem 2.5rem;
+    border-radius: 40rem;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(33, 0, 75, 0.07);
+    box-shadow: 0px 20px 80px 0px rgba(7, 5, 35, 0.75);
+    backdrop-filter: blur(10px);
+    transition: .5s ease;
+
+}
+
+/* PLAYER CARD END */

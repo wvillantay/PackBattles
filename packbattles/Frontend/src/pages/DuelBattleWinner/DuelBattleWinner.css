@@ -1,0 +1,40 @@
+
+.duel-battle-winner{
+    padding: 7rem 0;
+    position: relative;
+    isolation: isolate;
+}
+.duel-battle-winner .packs-bg {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    height: 90%;
+    z-index: -1;
+}
+
+.duel-battle-winner .packs-bg:after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(rgb(8, 6, 32, .5), rgb(8, 6, 32, .5));
+
+}
+
+.duel-battle-winner .bg-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.duel-battle-winner .packs-bg .bar-img {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    background: linear-gradient(transparent, rgb(8, 6, 32) 90%);
+}
