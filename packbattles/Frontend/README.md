@@ -6,6 +6,10 @@
 
     ```bash
     cd your-react-app
+    cd PackBattles-main
+    cd packbattles
+    cd Frontend
+    
     ```
 
 2. Install the dependencies:
@@ -23,7 +27,7 @@ If there are any configuration steps required, such as API keys or environment v
 1. Start the development server:
 
     ```bash
-    npm start
+    npm run dev 
     ```
 
 2. Visit [http://localhost:3000](http://localhost:3000) in your web browser to view the app.
