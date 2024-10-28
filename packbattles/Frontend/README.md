@@ -5,7 +5,6 @@
 1. Navigate to the project directory:
 
     ```bash
-    cd your-react-app
     cd PackBattles-main
     cd packbattles
     cd Frontend
