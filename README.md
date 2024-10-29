@@ -61,6 +61,6 @@ npm run build
 1. Start the Backend server:
 
     ```bash
-    npm run dev 
+    python main.py
     ```
 2. Visit [http://127.0.0.1:8080](http://127.0.0.1:8080) in your web browser to view the app.
