@@ -38,8 +38,7 @@ To build the production-ready version of the app, use the following command:
 
 ```bash
 npm run build
-
-
+```
 # To Run Backend
 # Flask
 
