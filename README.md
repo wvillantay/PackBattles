@@ -1,3 +1,5 @@
+UPDATE Will be set up on 4/02/25
+
 # PackBattles
 # To Run Frontend
 # React + Vite
