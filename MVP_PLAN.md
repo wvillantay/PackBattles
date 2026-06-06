@@ -13,8 +13,8 @@ A user can:
 3. Browse real packs and spend credits to open them
 4. Receive real cards saved to their inventory
 5. View their inventory
-6. Create or join a Duel Battle using a card from their inventory
-7. Win or lose — cards and credits transfer to the winner
+6. Create a Duel Battle by choosing a pack — both players open that same pack type as the battle wager
+7. Win or lose — the winner receives all cards drawn by both players
 
 That is the complete core loop. Everything else is post-MVP.
 
@@ -36,10 +36,10 @@ That is the complete core loop. Everything else is post-MVP.
 | Pack opening result screen | Show the card(s) received with name, rarity, value |
 | Inventory page (new) | Grid of all cards the user owns |
 | Battle lobby | Real list of open Duel Battles from database |
-| Create Duel Battle | Select a card from inventory, post to create |
-| Join Duel Battle | Select a card from inventory, join resolves immediately |
-| Duel Battle resolution | Higher value card wins, winner receives loser's card |
-| Duel Battle result screen | Show winner, winning card, amount transferred |
+| Create Duel Battle | Select a pack type, pay pack cost, open the pack — cards stored on the battle doc (not in inventory yet) |
+| Join Duel Battle | Pay same pack cost, open same pack type — resolves immediately on join |
+| Duel Battle resolution | Higher total card value wins; winner gets ALL cards from both players added to inventory |
+| Duel Battle result screen | Show winner, both players' card draws, total values, all cards transferred |
 | Wins/losses tracked | Stored on user record |
 
 ---
@@ -108,7 +108,7 @@ Card definitions — what cards exist in the game. Not what any user owns.
 }
 ```
 
-Seed with a minimum of 20 cards across the four games, covering all rarity tiers.
+For MVP, seed with 20 Pokemon test cards using placeholder images from `public/imgs/`. Real card names, images, and TCGplayer prices can replace the placeholders later — only database updates required, no code changes.
 
 ---
 
@@ -162,25 +162,31 @@ Index on `user_id` — this query runs on every inventory page load.
 
 ### Collection 5: `battles`
 
-One document per battle. Resolves synchronously when player 2 joins — no WebSocket needed for MVP.
+One document per battle. Both players open the **same pack type**. Cards are stored as embedded snapshots on the battle document — not in inventory — until the battle resolves. Resolves synchronously when player 2 joins; no WebSocket needed for MVP.
 
 ```
 {
-  _id:                     ObjectId  (auto)
-  mode:                    String    (hardcoded "duel" for MVP)
-  status:                  String    (enum: "waiting" | "active" | "complete")
-  creator_id:              ObjectId  (ref: users._id)
-  creator_card_id:         ObjectId  (ref: cards._id — the card they're wagering)
-  creator_inventory_id:    ObjectId  (ref: inventory._id — to decrement/transfer)
-  opponent_id:             ObjectId  (nullable until join)
-  opponent_card_id:        ObjectId  (nullable until join)
-  opponent_inventory_id:   ObjectId  (nullable until join)
-  winner_id:               ObjectId  (nullable until resolved)
-  credits_at_stake:        Float     (sum of both cards' values)
-  created_at:              DateTime  (auto)
-  resolved_at:             DateTime  (nullable)
+  _id:                  ObjectId  (auto)
+  mode:                 String    (hardcoded "duel" for MVP)
+  status:               String    (enum: "waiting" | "complete" — no active state)
+  pack_id:              ObjectId  (ref: packs._id — same pack both players open)
+  pack_cost:            Int       (snapshot of pack.cost at creation time)
+  creator_id:           ObjectId  (ref: users._id)
+  creator_cards: [
+    { card_id, name, image_url, rarity, value }
+  ]                               (cards drawn from pack — snapshots, not inventory refs)
+  creator_total_value:  Float     (sum of creator_cards[].value)
+  opponent_id:          ObjectId  (nullable until join)
+  opponent_cards:       Array     (nullable until join — same structure as creator_cards)
+  opponent_total_value: Float     (nullable until join)
+  winner_id:            ObjectId  (nullable until resolved)
+  total_value_at_stake: Float     (nullable until resolved — creator_total + opponent_total)
+  created_at:           DateTime  (auto)
+  resolved_at:          DateTime  (nullable)
 }
 ```
+
+**Key rule:** Cards drawn for a battle are NOT written to inventory until resolution. On resolve, all cards from `creator_cards` + `opponent_cards` are upserted into the winner's inventory using the compound `(user_id, card_id)` unique index.
 
 ---
 
@@ -299,9 +305,11 @@ Response: [
 ```
 Response: [
   {
-    id, status, credits_at_stake, created_at,
-    creator: { name, avatar? },
-    creator_card: { name, image_url, rarity, value }
+    id, status, pack_cost, created_at,
+    pack: { name, image_url, cost },
+    creator: { name },
+    creator_cards: [ { name, image_url, rarity, value } ],
+    creator_total_value
   }
 ]
 Filter:   only return status="waiting"
@@ -310,33 +318,53 @@ Filter:   only return status="waiting"
 **POST `/api/battles`**
 ```
 Auth:     Required
-Request:  { inventory_id }   ← the inventory entry the user is wagering
-Validate: inventory entry belongs to user, user does not already have an open battle
-Action:   create battle document with status="waiting", lock the card
-Response: { battle_id, status, credits_at_stake }
-Errors:   400 if card not in inventory, 400 if already has open battle
+Request:  { pack_id }   ← which pack type this battle will use
+Validate: pack exists, user.credits >= pack.cost, user has no other "waiting" battle
+Action:
+  1. Deduct pack.cost from creator.credits
+  2. Run weighted random draw (pack.cards_per_open cards) using pack.pool
+  3. Store drawn cards as creator_cards[] (embedded snapshots, NOT in inventory)
+  4. Set creator_total_value = sum of drawn card values
+  5. Snapshot pack_cost from pack.cost
+  6. Create battle document with status="waiting"
+Response: {
+  battle_id, status, pack_cost,
+  pack: { name, image_url },
+  creator_cards: [ { name, image_url, rarity, value } ],
+  creator_total_value,
+  credits_remaining
+}
+Errors:   400 if pack not found, 400 if insufficient credits, 400 if already has open battle
 ```
 
 **POST `/api/battles/<id>/join`**
 ```
 Auth:     Required
-Request:  { inventory_id }   ← the card this player is wagering
-Validate: battle status="waiting", joiner != creator, card belongs to joiner
+Request:  {}   ← no card selection; pack is determined by the battle document
+Validate: battle status="waiting", joiner != creator, joiner.credits >= battle.pack_cost
 Action:
-  1. Set opponent fields on battle
-  2. Compare creator_card.value vs opponent_card.value
-  3. Higher value wins (tie = creator wins for simplicity)
-  4. Transfer loser's card to winner inventory (or add credits equivalent)
-  5. Increment winner.wins, loser.losses
-  6. Set battle.status = "complete", battle.winner_id, battle.resolved_at
+  1. Deduct battle.pack_cost from opponent.credits
+  2. Run weighted random draw on same pack_id → opponent_cards[] (NOT in inventory)
+  3. Set opponent_total_value = sum of drawn card values
+  4. Compare creator_total_value vs opponent_total_value
+     → Higher total wins; tie goes to creator
+  5. Upsert ALL cards (creator_cards + opponent_cards) into winner's inventory
+     → For each card: update_one({ user_id: winner_id, card_id: card.card_id },
+                                  { $inc: { quantity: 1 } }, upsert=True)
+  6. Increment winner.wins, loser.losses on users collection
+  7. Set battle: opponent_id, opponent_cards, opponent_total_value,
+                 winner_id, total_value_at_stake, status="complete", resolved_at
 Response: {
   winner_id,
   winner_name,
-  winning_card: { name, image_url, value },
-  losing_card: { name, image_url, value },
-  credits_at_stake
+  creator_cards: [ { name, image_url, rarity, value } ],
+  creator_total_value,
+  opponent_cards: [ { name, image_url, rarity, value } ],
+  opponent_total_value,
+  total_value_at_stake,
+  credits_remaining
 }
-Errors:   400 if battle not waiting, 403 if trying to join own battle
+Errors:   400 if battle not waiting, 400 if insufficient credits, 403 if joining own battle
 ```
 
 **GET `/api/battles/<id>`**
@@ -445,10 +473,10 @@ Only touch what is needed for MVP. Leave all other pages as static mockups.
 
 **What changes:**
 - Read URL param: if `?id=<id>` present → join flow; if no ID → create flow
-- **Create flow:** Show user's inventory cards to select. On select → `POST /api/battles` → redirect to lobby or show "Waiting for opponent" state.
-- **Join flow:** Show battle info (opponent's card) + user's inventory to pick from. On select → `POST /api/battles/<id>/join` → navigate to `/duel-battle-winner?id=<id>` with result data.
-- Replace hardcoded "Player Name" / "Pack Name Here" with real data
-- Replace hardcoded progress value (30) with real round data
+- **Create flow:** Show list of available packs (fetched from `GET /api/packs`). User selects a pack → `POST /api/battles` with `{ pack_id }` → show "Waiting for opponent" state with the cards they drew displayed.
+- **Join flow:** Fetch battle by ID to show the pack type and creator's drawn cards. Show "Open the same pack to join" confirmation with cost. On confirm → `POST /api/battles/<id>/join` → navigate to `/duel-battle-winner?id=<id>` with result data.
+- Replace hardcoded "Player Name" / "Pack Name Here" with real data from API
+- No card selection from inventory in either flow — the pack draw is automatic
 
 ---
 
@@ -456,7 +484,8 @@ Only touch what is needed for MVP. Leave all other pages as static mockups.
 
 **What changes:**
 - Read result from location state (passed from DuelBattle on navigation) or fetch `GET /api/battles/<id>`
-- Show real winner name, winning card, losing card, credits transferred
+- Show real winner name, both players' card draws side-by-side, each player's total value, and total value transferred
+- If current user is the winner: show "You won X cards worth Y credits total"
 - Wire "Create New Battle" → navigate to `/duel-battle`
 - Wire "Back to Battle List" → navigate to `/battles`
 
@@ -511,23 +540,23 @@ This single file change — replacing fake auth with real auth connected to real
 
 ## Seed Data Needed Before Frontend Work
 
-Before Steps 6–8 are useful, insert at minimum:
+Before Steps 6–8 are useful, run `seed.py`. It inserts:
 
-**3 packs:**
-- Pokemon Starter Pack (cost: 100 credits, 5 cards per open)
-- Yugioh Classic Pack (cost: 150 credits, 5 cards per open)  
-- Magic Rare Pack (cost: 200 credits, 5 cards per open)
+**3 packs (all Pokemon, all use placeholder images from `public/imgs/`):**
+- Test Pack Alpha (cost: 100 credits, 5 cards per open — common-heavy pool)
+- Test Pack Beta (cost: 150 credits, 5 cards per open — balanced pool)
+- Test Pack Gamma (cost: 200 credits, 5 cards per open — rare-heavy pool)
 
-**20 cards minimum (5 per rarity tier):**
+**20 Pokemon test cards:**
 
 | Rarity | Count | Value range |
 |--------|-------|-------------|
-| Common | 8 | 5 – 25 credits |
-| Uncommon | 6 | 30 – 75 credits |
-| Rare | 4 | 80 – 200 credits |
-| Ultra Rare | 2 | 250 – 500 credits |
+| Common | 8 | 7 – 15 credits |
+| Uncommon | 6 | 35 – 65 credits |
+| Rare | 4 | 130 – 200 credits |
+| Ultra Rare | 2 | 350 – 500 credits |
 
-Use existing card images already in `/public/imgs/` for the initial seed. Real card art can be swapped in later without changing any code — just update the `image_url` field in the database.
+All cards use existing placeholder images from `public/imgs/`. Real card names, images, and prices are swapped in by updating the database — no code changes needed.
 
 ---
 
@@ -537,9 +566,9 @@ A new user gets **300 credits**.
 
 | Pack | Cost | Openable with 300 credits |
 |------|------|--------------------------|
-| Pokemon Starter | 100 | 3 times |
-| Yugioh Classic | 150 | 2 times |
-| Magic Rare | 200 | 1 time |
+| Test Pack Alpha (Pokemon) | 100 | 3 times |
+| Test Pack Beta (Pokemon) | 150 | 2 times |
+| Test Pack Gamma (Pokemon) | 200 | 1 time |
 
 This gives new users enough to try the game without spending anything. After opening packs, they battle to win more cards. This is the loop.
 
@@ -555,8 +584,8 @@ The MVP is complete when a second person (not the developer) can:
 4. Browse the pack list
 5. Open a pack and see real cards appear in their inventory
 6. Go to the battle lobby and see open battles
-7. Join a battle using one of their cards
-8. See the winner screen with a real result
-9. Check their inventory and see the card transferred (or not)
+7. Create or join a Duel Battle by selecting a pack and paying the pack cost
+8. See the winner screen with both players' drawn cards and a real result
+9. Check their inventory and see all battle cards transferred to the winner
 
 If a real user can complete those 9 steps without help, the MVP is done.

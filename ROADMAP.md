@@ -26,19 +26,19 @@ MongoDB Collections
         │       │
         │       └── Inventory System
         │               │
-        │               ├── Pack Opening ──────────── Payment
+        │               ├── Pack Opening ──────────── Payment (Phase 4)
         │               │
-        │               ├── Trade System
+        │               ├── Trade System (Phase 5)
         │               │
-        │               ├── Upgrade System
+        │               ├── Upgrade System (Phase 5)
         │               │
         │               └── Battle System
         │                       │
         │                       ├── Matchmaking
         │                       │
-        │                       ├── WebSocket (real-time)
-        │                       │
-        │                       └── Additional Battle Modes
+        │                       └── Additional Battle Modes (Phase 6)
+        │                               │
+        │                               └── WebSocket / real-time (Phase 6)
         │
         └── Events / Admin (independent, lower priority)
 ```
@@ -46,7 +46,7 @@ MongoDB Collections
 **Hard rules:**
 - Nothing works without the database
 - No user features work without auth
-- No battles work without inventory (you need cards to play)
+- No battles work without credits (both players pay pack cost to open the battle wager) or without inventory write infrastructure (winner's cards are written to inventory on resolve)
 - No inventory without pack opening
 - Pack opening can ship without payment (use free starter credits for MVP)
 
@@ -123,19 +123,17 @@ MongoDB Collections
 
 | Task | Hours |
 |------|-------|
-| Install Flask-SocketIO (or move to a Node.js server) | 2 |
-| Backend: POST `/api/battles` — create battle room, store in DB | 4 |
-| Backend: POST `/api/battles/:id/join` — second player joins | 3 |
-| Backend: GET `/api/battles` — return open battles list | 2 |
-| Backend: Duel Battle game logic — compare card values, determine winner, transfer cards/credits | 6 |
-| Backend: WebSocket events — `battle_start`, `round_update`, `battle_end` | 8 |
+| Backend: POST `/api/battles` — create battle, deduct credits, run pack draw, store card snapshots on battle doc | 4 |
+| Backend: POST `/api/battles/:id/join` — deduct credits, draw same pack, compare total values, write all drawn cards to winner's inventory | 5 |
+| Backend: GET `/api/battles` — return open battles list with pack info and creator's drawn cards | 2 |
+| Backend: Duel Battle resolution — compare `creator_total_value` vs `opponent_total_value`, write all cards (both draws) to winner's inventory, increment wins/losses | 5 |
 | Frontend: wire Battles lobby to real API (replace hardcoded table rows) | 4 |
-| Frontend: working tab filters and search on battle lobby | 3 |
-| Frontend: wire DuelBattle page to WebSocket (show real player, real cards, real progress) | 8 |
-| Frontend: wire DuelBattleWinner page to real result data | 3 |
-| Frontend: working "Start New Battle" flow with pack/card selection | 5 |
-| Frontend: working "Join" and "Watch" buttons | 3 |
-| **Phase 3 Total** | **~51 hrs (~3.5 weeks)** |
+| Frontend: working tab filter (Duel Battle only for MVP) and search | 3 |
+| Frontend: DuelBattle.jsx — create flow (select pack → show drawn cards → waiting state) | 5 |
+| Frontend: DuelBattle.jsx — join flow (show battle pack + cost → confirm → navigate to result) | 3 |
+| Frontend: DuelBattleWinner.jsx — show both players' card draws, totals, winner | 3 |
+| Frontend: working "Start New Battle", "Join", and "Watch" buttons | 4 |
+| **Phase 3 Total** | **~38 hrs (~2.5 weeks)** |
 
 **Unlocks:** Playable MVP
 
@@ -148,9 +146,9 @@ MongoDB Collections
 - Users can open packs and receive real cards
 - Users own a real inventory
 - Users can create and join Duel Battles
-- One battle mode works end-to-end in real time
+- One battle mode works end-to-end (battle resolves synchronously on join — no WebSocket needed)
 
-**Total hours to MVP: ~138 hrs (~9–10 weeks part-time)**
+**Total hours to MVP: ~125 hrs (~8–9 weeks part-time)**
 
 ---
 
@@ -202,7 +200,7 @@ MongoDB Collections
 ---
 
 ## Phase 6 — Additional Battle Modes
-**Build on the WebSocket infrastructure from Phase 3. Each mode is faster than the first.**
+**Flask-SocketIO (WebSocket) is introduced in this phase for modes that benefit from real-time updates. Duel Battle (Phase 3) resolves synchronously and does not need it. Each additional mode is faster to build than the first.**
 
 | Mode | New Logic Required | Est. Hours |
 |------|--------------------|-----------|
@@ -271,14 +269,14 @@ MongoDB Collections
 | **0B** Auth | Real login/signup | 20 | Week 2.5 |
 | **1** Pack Opening | Core game action | 31 | Week 4.5 |
 | **2** Inventory | Card ownership | 21 | Week 6 |
-| **3** Duel Battle | **🏁 Playable MVP** | 51 | **Week 9.5** |
-| **4** Payment | Monetization | 26 | Week 11.5 |
-| **5** Trade & Upgrade | Feature complete | 41 | Week 14.5 |
-| **6** More Battle Modes | Full game | 64 | Week 19 |
-| **7** Events/Admin/Polish | Launch ready | 95 | **Week 25.5** |
+| **3** Duel Battle | **🏁 Playable MVP** | 38 | **Week 8.5** |
+| **4** Payment | Monetization | 26 | Week 10 |
+| **5** Trade & Upgrade | Feature complete | 41 | Week 13 |
+| **6** More Battle Modes | Full game | 64 | Week 17 |
+| **7** Events/Admin/Polish | Launch ready | 95 | **Week 23.5** |
 
-**MVP (core loop playable): ~9–10 weeks part-time**  
-**Full launch-ready product: ~25–26 weeks part-time (~6 months)**
+**MVP (core loop playable): ~8–9 weeks part-time**  
+**Full launch-ready product: ~23–24 weeks part-time (~6 months)**
 
 ---
 
@@ -287,7 +285,7 @@ MongoDB Collections
 If the goal is to get something in front of real users as fast as possible:
 
 1. **Skip payment in MVP** — give every new user a fixed credit balance on signup (e.g. 3 free pack opens). Add real payment in Phase 4 once the loop is proven.
-2. **Skip King of the Hill, Dice Roll, High Ball for MVP** — ship Duel Battle only. The WebSocket infrastructure transfers to all other modes.
+2. **Skip King of the Hill, Dice Roll, High Ball for MVP** — ship Duel Battle only. Duel Battle resolves synchronously — no WebSocket needed. Add Flask-SocketIO in Phase 6 when building modes that benefit from real-time updates.
 3. **Skip Trade and Upgrade for MVP** — they require inventory to be meaningful, and adding them too early complicates testing.
 4. **Use a minimal card set** — 15–20 unique cards across 2–3 pack types is enough to validate the loop. Do not wait for a full card catalog.
 5. **Do not build admin panel for MVP** — manage initial data directly in MongoDB Compass.

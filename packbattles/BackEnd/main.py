@@ -1,7 +1,17 @@
-from flask import Flask,jsonify,request
+import os
+from dotenv import load_dotenv
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_pymongo import PyMongo
 
+load_dotenv()
+
+mongo_uri = os.getenv("MONGO_URI")
+if not mongo_uri:
+    raise SystemExit(
+        "MONGO_URI not set. "
+        "Create packbattles/BackEnd/.env — see TEST_CONNECTION.md."
+    )
 
 # Dummy user data for demonstration
 dummy_users = [
@@ -9,10 +19,9 @@ dummy_users = [
     {"email": "user2@example.com", "password": "password2"}
 ]
 
-app   = Flask(__name__)
-cors= CORS(app, origins='*')
-#  Connect to MongoDB, change the connection parameters according to  setup
-app.config["MONGO_URI"] = "mongodb://localhost:27017/mydatabase"
+app = Flask(__name__)
+CORS(app, origins='*')
+app.config["MONGO_URI"] = mongo_uri
 mongo = PyMongo(app)
 
 @app.route('/api/users', methods=['GET'])
