@@ -323,6 +323,7 @@ One document per battle game. Both players open the **same pack type** as part o
 | `opponent_cards` | Array | no | null | Card snapshots drawn from the same pack; set on join |
 | `opponent_total_value` | Double | no | null | Sum of `opponent_cards[].value`; set on join |
 | `winner_id` | ObjectId | no | null | Set when resolved |
+| `tiebreaker` | String | no | null | Set only when totals are exactly equal. Value: `"creator"` or `"opponent"` — records which side the server coin flip chose |
 | `total_value_at_stake` | Double | no | null | `creator_total_value + opponent_total_value`; set when resolved |
 | `created_at` | Date | yes | now | UTC timestamp |
 | `resolved_at` | Date | no | null | Set when status → `complete` |
@@ -386,6 +387,7 @@ There is no `active` state. The battle moves directly from `waiting` to `complet
   "opponent_cards": null,
   "opponent_total_value": null,
   "winner_id": null,
+  "tiebreaker": null,
   "total_value_at_stake": null,
   "created_at": { "$date": "2026-06-06T10:00:00Z" },
   "resolved_at": null
@@ -419,6 +421,7 @@ There is no `active` state. The battle moves directly from `waiting` to `complet
   ],
   "opponent_total_value": 78.00,
   "winner_id": { "$oid": "666100000000000000000001" },
+  "tiebreaker": null,
   "total_value_at_stake": 287.00,
   "created_at": { "$date": "2026-06-06T10:00:00Z" },
   "resolved_at": { "$date": "2026-06-06T10:04:32Z" }
@@ -433,7 +436,7 @@ Creator wins (209 > 78). All 10 cards are upserted into the creator's inventory.
 - Creator's credits must be >= `pack_cost` before the battle is created; deduct immediately on create
 - Opponent's credits must be >= `battle.pack_cost` before they can join; deduct immediately on join
 - `pack_cost` is snapshotted from the pack at creation time — the opponent pays the snapshotted amount, not a live lookup
-- On resolve: winner is the player with the higher `total_value`; tie goes to creator
+- On resolve: winner is the player with the higher `total_value`; if totals are exactly equal, winner is determined by a server-side coin flip — result stored in `tiebreaker` as `"creator"` or `"opponent"`, `winner_id` set accordingly
 - On resolve: upsert all cards from `creator_cards` + `opponent_cards` into winner's `inventory` using the compound unique index (`user_id`, `card_id`) with `$inc: { quantity: 1 }`
 - On resolve: increment `winner.wins` and loser's `losses` on the `users` document
 
@@ -720,7 +723,7 @@ Review these questions and confirm each one before implementation begins:
 1. **Starter credits** — Is 300 credits (= 3 Pokemon packs) the right starting amount? Too generous? Too tight?
 2. **Pack costs** — 100 / 150 / 200 credits. Does this feel right for the economy?
 3. **Battle resolution** — Each player opens 5 cards from the same pack; higher TOTAL value wins. Is this the intended Duel Battle mechanic, or should something else determine the winner?
-4. **Tie rule** — If both players' total values are exactly equal, the creator wins. Acceptable?
+4. **Tie rule** — If both players' total values are exactly equal, winner is determined by a server-side coin flip. Result stored in `tiebreaker` field on the battle document.
 5. **Battle reward** — Winner receives ALL cards drawn by both players (up to 10 cards total) added to inventory. Loser receives nothing. Is this correct?
 6. **Card images** — The seed script uses existing `/imgs/image 29.png` – `/imgs/image 30 (6).png` as placeholder art. All 26 of those files are confirmed to exist in `Frontend/public/imgs/`. Real images will be swapped in by updating `image_url` in the database — no code changes needed.
 7. **Card value scale** — Common: 7–15 credits. Uncommon: 35–65 credits. Rare: 130–200 credits. Ultra rare: 350–500 credits. Does this range make sense for the game economy?

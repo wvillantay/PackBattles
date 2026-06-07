@@ -38,7 +38,7 @@ That is the complete core loop. Everything else is post-MVP.
 | Battle lobby | Real list of open Duel Battles from database |
 | Create Duel Battle | Select a pack type, pay pack cost, open the pack — cards stored on the battle doc (not in inventory yet) |
 | Join Duel Battle | Pay same pack cost, open same pack type — resolves immediately on join |
-| Duel Battle resolution | Higher total card value wins; winner gets ALL cards from both players added to inventory |
+| Duel Battle resolution | Higher total card value wins; exact tie resolved by server-side coin flip (result stored in battle record); winner gets ALL cards from both players added to inventory |
 | Duel Battle result screen | Show winner, both players' card draws, total values, all cards transferred |
 | Wins/losses tracked | Stored on user record |
 
@@ -180,6 +180,7 @@ One document per battle. Both players open the **same pack type**. Cards are sto
   opponent_cards:       Array     (nullable until join — same structure as creator_cards)
   opponent_total_value: Float     (nullable until join)
   winner_id:            ObjectId  (nullable until resolved)
+  tiebreaker:           String    (nullable — set only on exact tie: "creator" or "opponent", records coin flip result)
   total_value_at_stake: Float     (nullable until resolved — creator_total + opponent_total)
   created_at:           DateTime  (auto)
   resolved_at:          DateTime  (nullable)
@@ -347,7 +348,9 @@ Action:
   2. Run weighted random draw on same pack_id → opponent_cards[] (NOT in inventory)
   3. Set opponent_total_value = sum of drawn card values
   4. Compare creator_total_value vs opponent_total_value
-     → Higher total wins; tie goes to creator
+     → Higher total wins
+     → If exactly equal: server-side coin flip picks winner;
+       set tiebreaker = "creator" or "opponent" on the battle document
   5. Upsert ALL cards (creator_cards + opponent_cards) into winner's inventory
      → For each card: update_one({ user_id: winner_id, card_id: card.card_id },
                                   { $inc: { quantity: 1 } }, upsert=True)
