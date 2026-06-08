@@ -56,32 +56,70 @@ Save as **PACK_ID** and note **PACK_COST**.
 
 ---
 
-## Step 3 — Create a battle (User A)
+## Step 3 — Create a battle (User A) — single pack
 
 ```
 POST http://localhost:8080/api/battles
 Authorization: Bearer TOKEN_A
 Content-Type: application/json
 
-{ "pack_id": "<PACK_ID>" }
+{ "pack_id": "<PACK_ID>", "pack_quantity": 1 }
 ```
+
+(Omitting `pack_quantity` also defaults to 1.)
 
 **Expected:** `201 Created`
 ```json
 {
-  "id":         "<battle_id>",
-  "status":     "open",
-  "creator_id": "<user_a_id>",
-  "pack_id":    "<PACK_ID>",
-  "pack_name":  "...",
-  "pack_cost":  <PACK_COST>,
-  "created_at": "..."
+  "id":            "<battle_id>",
+  "status":        "open",
+  "creator_id":    "<user_a_id>",
+  "pack_id":       "<PACK_ID>",
+  "pack_name":     "...",
+  "pack_cost":     <PACK_COST>,
+  "pack_quantity": 1,
+  "total_cost":    <PACK_COST>,
+  "created_at":    "..."
 }
 ```
 
 Verify:
 - Response does NOT contain `creator_cards` or `creator_total`
 - Save `id` as **BATTLE_ID**
+
+---
+
+## Step 3b — Create a multi-pack battle (User A) — 3 packs
+
+```
+POST http://localhost:8080/api/battles
+Authorization: Bearer TOKEN_A
+Content-Type: application/json
+
+{ "pack_id": "<PACK_ID>", "pack_quantity": 3 }
+```
+
+**Expected:** `201 Created` with `pack_quantity: 3` and `total_cost: PACK_COST × 3`
+
+Verify:
+- Creator credits deducted by `PACK_COST × 3`
+
+---
+
+## Step 3c — Invalid pack_quantity rejected
+
+```
+POST http://localhost:8080/api/battles
+Authorization: Bearer TOKEN_A
+Content-Type: application/json
+
+{ "pack_id": "<PACK_ID>", "pack_quantity": 4 }
+```
+
+**Expected:** `400 Bad Request`
+```json
+{ "error": "pack_quantity must be 1, 2, 3, 5, or 10" }
+```
 
 ---
 
@@ -92,7 +130,7 @@ GET http://localhost:8080/api/me
 Authorization: Bearer TOKEN_A
 ```
 
-**Expected:** `credits` = previous value − PACK_COST
+**Expected:** `credits` = previous value − TOTAL_COST (PACK_COST × pack_quantity)
 
 ---
 
@@ -105,7 +143,7 @@ Authorization: Bearer TOKEN_A
 
 **Expected:** Array contains one entry for BATTLE_ID with:
 - `creator_name` = User A's name
-- `pack_name`, `pack_cost` present
+- `pack_name`, `pack_cost`, `pack_quantity`, `total_cost` present
 - `creator_cards` and `creator_total` are **absent**
 
 ---
@@ -160,12 +198,15 @@ Authorization: Bearer TOKEN_B
   "id":             "<BATTLE_ID>",
   "status":         "completed",
   "pack_name":      "...",
+  "pack_cost":      <float>,
+  "pack_quantity":  <int>,
+  "total_cost":     <float>,
   "creator_name":   "User A",
   "creator_total":  <float>,
-  "creator_cards":  [ {...}, {...} ],
+  "creator_cards":  [ {...}, ... ],
   "opponent_name":  "User B",
   "opponent_total": <float>,
-  "opponent_cards": [ {...}, {...} ],
+  "opponent_cards": [ {...}, ... ],
   "winner_id":      "<id of higher-total player>",
   "tiebreaker":     null,
   "completed_at":   "..."
@@ -173,8 +214,8 @@ Authorization: Bearer TOKEN_B
 ```
 
 Verify:
-- `creator_cards` length = pack's `cards_per_open`
-- `opponent_cards` length = pack's `cards_per_open`
+- `creator_cards` length = `pack_quantity × cards_per_open`
+- `opponent_cards` length = `pack_quantity × cards_per_open`
 - `winner_id` matches the player with higher `creator_total` vs `opponent_total`
 
 ---
@@ -186,7 +227,7 @@ GET http://localhost:8080/api/me
 Authorization: Bearer TOKEN_B
 ```
 
-**Expected:** `credits` = previous value − PACK_COST
+**Expected:** `credits` = previous value − TOTAL_COST (PACK_COST × pack_quantity)
 
 ---
 
@@ -276,7 +317,9 @@ Arrange two draws with identical totals (requires manipulating pack pool or usin
 | `POST /api/battles` with missing `pack_id` | `400` — pack_id is required |
 | `POST /api/battles` with invalid `pack_id` format | `400` — Invalid pack_id |
 | `POST /api/battles` with non-existent `pack_id` | `404` — Pack not found |
-| `POST /api/battles` when creator has insufficient credits | `400` — Insufficient credits |
+| `POST /api/battles` with `pack_quantity: 4` (not in allowed set) | `400` — pack_quantity must be 1, 2, 3, 5, or 10 |
+| `POST /api/battles` with `pack_quantity: 0` | `400` — pack_quantity must be 1, 2, 3, 5, or 10 |
+| `POST /api/battles` when creator has insufficient credits for total_cost | `400` — Insufficient credits |
 | `GET /api/battles/<bad_id>` | `400` — Invalid battle id |
 | `GET /api/battles/<nonexistent>` | `404` — Battle not found |
 | Any endpoint without `Authorization` header | `401` |
@@ -288,7 +331,8 @@ Arrange two draws with identical totals (requires manipulating pack pool or usin
 Open **battles** collection, find BATTLE_ID document and confirm:
 - `type: "duel"`, `status: "completed"`
 - `pack_id`: ObjectId matching PACK_ID
-- `pack_cost`: matches pack cost
+- `pack_cost`: matches per-pack cost
+- `pack_quantity`: 1/2/3/5/10 as set at creation
 - `creator_id`, `opponent_id`: correct ObjectIds
 - `creator_cards`, `opponent_cards`: arrays of ObjectIds (lengths = cards_per_open)
 - `creator_total`, `opponent_total`: floats
@@ -301,7 +345,8 @@ Open **battles** collection, find BATTLE_ID document and confirm:
 ## Completion checklist
 
 - [ ] `POST /api/battles` requires `pack_id`, rejects missing/invalid values
-- [ ] Creator's credits deducted immediately on battle creation
+- [ ] `POST /api/battles` with `pack_quantity` not in {1,2,3,5,10} → 400
+- [ ] Creator's credits deducted by `pack_cost × pack_quantity` on battle creation
 - [ ] `GET /api/battles` omits `creator_cards` and `creator_total` (hidden draw)
 - [ ] `GET /api/battles/<id>` (open) also hides creator's draw
 - [ ] Creator cannot join own battle (400)

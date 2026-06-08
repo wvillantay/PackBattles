@@ -101,7 +101,8 @@ Duel Battle MVP. One document per battle.
   "status":         "open" | "completed",
 
   "pack_id":        ObjectId,    // ref → packs._id — the pack both players open
-  "pack_cost":      number,      // snapshot of cost at battle creation time
+  "pack_cost":      number,      // snapshot of per-pack cost at battle creation time
+  "pack_quantity":  number,      // 1 | 2 | 3 | 5 | 10 — packs each player opens
 
   "creator_id":     ObjectId,    // ref → users._id
   "creator_cards":  [ObjectId],  // cards drawn from creator's pack opening

@@ -20,8 +20,6 @@ import Event from './pages/Event/Event'
 import Upgrade from './pages/Upgrade/Upgrade'
 import Trade from './pages/Trade/Trade'
 import Battles from './pages/Battles/Battles'
-import DuelBattle from './pages/DuelBattle/DuelBattle'
-import DuelBattleWinner from './pages/DuelBattleWinner/DuelBattleWinner'
 import BattlePopup from './pages/BattlePopup/BattlePopup'
 import HighBall from './pages/HighBall/HighBall'
 import DiceRoll from './pages/DiceRoll/DiceRoll'
@@ -54,8 +52,6 @@ const App = () => {
         <Route path="/pack"                element={<ProtectedRoute><Pack /></ProtectedRoute>} />
         <Route path="/inventory"           element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
         <Route path="/battles"             element={<ProtectedRoute><Battles /></ProtectedRoute>} />
-        <Route path="/duel-battle"         element={<ProtectedRoute><DuelBattle /></ProtectedRoute>} />
-        <Route path="/duel-battle-winner"  element={<ProtectedRoute><DuelBattleWinner /></ProtectedRoute>} />
 
         {/* Static mockup pages — not yet wired, left unprotected for now */}
         <Route path="/events"                          element={<Events />} />

@@ -65,14 +65,15 @@
 | Method | Route | Description |
 |--------|-------|-------------|
 | `GET`  | `/api/battles` | List open battles (hidden draws) |
-| `POST` | `/api/battles` | Create battle — body: `{ pack_id }` |
+| `POST` | `/api/battles` | Create battle — body: `{ pack_id, pack_quantity }` (quantity: 1/2/3/5/10) |
 | `GET`  | `/api/battles/<id>` | Battle detail (hidden while open, full when completed) |
 | `POST` | `/api/battles/<id>/join` | Join + resolve; no body required |
 
 ### Frontend
 
-- Battles.jsx — live list; "Start New Battle" → pack selector modal → create;
-  "Join" → confirmation modal → result overlay showing both draws side by side
+- Battles.jsx — live list; "Start New Battle" → pack selector + quantity (×1/2/3/5/10) modal → create;
+  "Join" → confirmation modal showing total cost → result overlay showing both draws side by side
+  with sticky Close bar always reachable regardless of card count
 
 ---
 

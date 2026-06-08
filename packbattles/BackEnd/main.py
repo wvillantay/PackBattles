@@ -343,14 +343,17 @@ def list_battles():
     for b in battles:
         creator = mongo.db.users.find_one({"_id": b["creator_id"]}, {"name": 1})
         pack    = mongo.db.packs.find_one({"_id": b["pack_id"]},    {"name": 1, "cost": 1})
+        qty = b.get("pack_quantity", 1)
         result.append({
-            "id":           str(b["_id"]),
-            "creator_id":   str(b["creator_id"]),
-            "creator_name": creator["name"] if creator else "Unknown",
-            "pack_id":      str(b["pack_id"]),
-            "pack_name":    pack["name"]    if pack    else "Unknown",
-            "pack_cost":    pack["cost"]    if pack    else 0,
-            "created_at":   b["created_at"].isoformat(),
+            "id":            str(b["_id"]),
+            "creator_id":    str(b["creator_id"]),
+            "creator_name":  creator["name"] if creator else "Unknown",
+            "pack_id":       str(b["pack_id"]),
+            "pack_name":     pack["name"]    if pack    else "Unknown",
+            "pack_cost":     pack["cost"]    if pack    else 0,
+            "pack_quantity": qty,
+            "total_cost":    (pack["cost"] if pack else 0) * qty,
+            "created_at":    b["created_at"].isoformat(),
         })
     return jsonify(result)
 
@@ -378,18 +381,32 @@ def create_battle():
     if not pack:
         return jsonify({"error": "Pack not found"}), 404
 
+    try:
+        pack_quantity = int(data.get("pack_quantity", 1))
+    except (TypeError, ValueError):
+        pack_quantity = 0
+    if pack_quantity not in {1, 2, 3, 5, 10}:
+        return jsonify({"error": "pack_quantity must be 1, 2, 3, 5, or 10"}), 400
+
+    total_cost = pack["cost"] * pack_quantity
+
     creator_id = ObjectId(g.user_id)
     user       = mongo.db.users.find_one({"_id": creator_id})
-    if user["credits"] < pack["cost"]:
+    if user["credits"] < total_cost:
         return jsonify({"error": "Insufficient credits"}), 400
 
-    # Draw the creator's pack — stored hidden until the battle resolves
-    drawn_ids, _drawn_docs, creator_total = _draw_from_pack(pack)
+    # Draw pack_quantity packs for the creator — stored hidden until battle resolves
+    all_drawn_ids = []
+    creator_total  = 0.0
+    for _ in range(pack_quantity):
+        ids, _docs, subtotal = _draw_from_pack(pack)
+        all_drawn_ids.extend(ids)
+        creator_total += subtotal
 
-    # Deduct pack cost from creator
+    # Deduct total cost from creator
     mongo.db.users.update_one(
         {"_id": creator_id},
-        {"$inc": {"credits": -pack["cost"]}},
+        {"$inc": {"credits": -total_cost}},
     )
 
     now    = datetime.now(timezone.utc)
@@ -398,8 +415,9 @@ def create_battle():
         "status":         "open",
         "pack_id":        pack_oid,
         "pack_cost":      pack["cost"],
+        "pack_quantity":  pack_quantity,
         "creator_id":     creator_id,
-        "creator_cards":  drawn_ids,
+        "creator_cards":  all_drawn_ids,
         "creator_total":  creator_total,
         "opponent_id":    None,
         "opponent_cards": None,
@@ -412,13 +430,15 @@ def create_battle():
 
     # Return only metadata — creator's draw is intentionally omitted
     return jsonify({
-        "id":         str(result.inserted_id),
-        "status":     "open",
-        "creator_id": str(creator_id),
-        "pack_id":    str(pack_oid),
-        "pack_name":  pack["name"],
-        "pack_cost":  pack["cost"],
-        "created_at": now.isoformat(),
+        "id":            str(result.inserted_id),
+        "status":        "open",
+        "creator_id":    str(creator_id),
+        "pack_id":       str(pack_oid),
+        "pack_name":     pack["name"],
+        "pack_cost":     pack["cost"],
+        "pack_quantity": pack_quantity,
+        "total_cost":    total_cost,
+        "created_at":    now.isoformat(),
     }), 201
 
 
@@ -441,15 +461,18 @@ def get_battle(battle_id):
 
     pack = mongo.db.packs.find_one({"_id": battle["pack_id"]}, {"name": 1, "cost": 1})
 
+    qty = battle.get("pack_quantity", 1)
     base = {
-        "id":         str(battle["_id"]),
-        "type":       battle["type"],
-        "status":     battle["status"],
-        "pack_id":    str(battle["pack_id"]),
-        "pack_name":  pack["name"] if pack else "Unknown",
-        "pack_cost":  pack["cost"] if pack else 0,
-        "creator_id": str(battle["creator_id"]),
-        "created_at": battle["created_at"].isoformat(),
+        "id":            str(battle["_id"]),
+        "type":          battle["type"],
+        "status":        battle["status"],
+        "pack_id":       str(battle["pack_id"]),
+        "pack_name":     pack["name"] if pack else "Unknown",
+        "pack_cost":     pack["cost"] if pack else 0,
+        "pack_quantity": qty,
+        "total_cost":    (pack["cost"] if pack else 0) * qty,
+        "creator_id":    str(battle["creator_id"]),
+        "created_at":    battle["created_at"].isoformat(),
     }
 
     if battle["status"] == "completed":
@@ -503,17 +526,27 @@ def join_battle(battle_id):
     if not pack:
         return jsonify({"error": "Pack no longer exists"}), 404
 
+    pack_quantity = battle.get("pack_quantity", 1)
+    total_cost    = pack["cost"] * pack_quantity
+
     opponent = mongo.db.users.find_one({"_id": opponent_id})
-    if opponent["credits"] < pack["cost"]:
+    if opponent["credits"] < total_cost:
         return jsonify({"error": "Insufficient credits"}), 400
 
-    # Draw opponent's pack
-    opp_drawn_ids, opp_drawn_docs, opponent_total = _draw_from_pack(pack)
+    # Draw pack_quantity packs for the opponent
+    opp_drawn_ids  = []
+    opp_drawn_docs = []
+    opponent_total = 0.0
+    for _ in range(pack_quantity):
+        ids, docs, subtotal = _draw_from_pack(pack)
+        opp_drawn_ids.extend(ids)
+        opp_drawn_docs.extend(docs)
+        opponent_total += subtotal
 
-    # Deduct pack cost from opponent
+    # Deduct total cost from opponent
     mongo.db.users.update_one(
         {"_id": opponent_id},
-        {"$inc": {"credits": -pack["cost"]}},
+        {"$inc": {"credits": -total_cost}},
     )
 
     # Resolve: higher total wins; exact tie → coin flip
@@ -578,6 +611,8 @@ def join_battle(battle_id):
         "pack_id":        str(battle["pack_id"]),
         "pack_name":      pack["name"],
         "pack_cost":      pack["cost"],
+        "pack_quantity":  pack_quantity,
+        "total_cost":     total_cost,
         "creator_id":     str(battle["creator_id"]),
         "creator_name":   creator["name"]  if creator  else "Unknown",
         "creator_total":  creator_total,

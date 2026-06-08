@@ -32,37 +32,40 @@ Higher total wins all drawn cards. Exact tie → server-side coin flip.
 1. Click "Start New Battle"
 2. Verify:
    - Modal overlay appears with title "Start New Battle"
-   - Hint text explains the hidden-draw mechanic
+   - Hint text explains the hidden-draw + quantity mechanic
    - Pack tiles are displayed with: pack image, name, cost
-   - No pack is pre-selected
-   - "Create Battle" button is disabled
+   - No pack is pre-selected; no quantity selector shown yet
+   - "Create Battle (0 cr)" button is disabled
 
 ---
 
-## Step 3 — Pack selection in create modal
+## Step 3 — Pack selection and quantity in create modal
 
 1. Click a pack tile
 2. Verify:
    - Tile gets a purple border (selected state)
-   - Cost row appears: "Pack cost: X cr" and "Your credits: Y"
-   - Credits shown in purple if affordable, red if not
-   - "Create Battle" button becomes enabled (purple) when affordable
-3. Click a different pack tile — verify only the new one is selected
-4. If user cannot afford a pack, verify "Not enough credits" shown and button stays disabled
+   - Quantity selector appears: ×1, ×2, ×3, ×5, ×10 buttons
+   - ×1 is pre-selected (purple border)
+   - Cost row shows: "Per pack: X cr", "Quantity: ×1", "Total cost: X cr", "Your credits: Y"
+   - Total cost and credits shown in purple if affordable, red if not
+   - "Create Battle (X cr)" button enabled when affordable
+3. Click ×3 — verify cost row updates to "Total cost: X×3 cr" and button label changes
+4. Click a different pack tile — verify quantity resets to ×1
+5. If user cannot afford the chosen total, verify "Not enough credits" shown and button disabled
 
 ---
 
 ## Step 4 — Create battle succeeds
 
-1. Select an affordable pack and click "Create Battle"
+1. Select an affordable pack, choose ×3, and click "Create Battle (X cr)"
 2. Verify:
    - Modal closes immediately
    - Battle list refreshes — new row appears with:
      - CREATOR = User A's name
-     - PACK = selected pack name
-     - COST TO JOIN = pack cost
+     - PACK = selected pack name + "×3" badge
+     - COST TO JOIN = total cost (pack cost × 3)
      - ACTIONS = "Your battle" (not a Join button)
-   - Header shows User A's credits reduced by pack cost
+   - Header shows User A's credits reduced by total cost
 
 ---
 
@@ -85,13 +88,13 @@ No card images, no total value shown for the creator.
 
 ## Step 7 — "Join" opens the join confirmation modal
 
-1. As User B, click "Join" on User A's battle
+1. As User B, click "Join" on User A's battle (created with ×3)
 2. Verify:
    - Modal appears with title "Join Battle"
-   - Opponent info shows User A's name and pack name
-   - Hint text explains both-players-open-same-pack mechanic
-   - Cost row shows entry cost and User B's current credits
-   - "Join for X cr" button is enabled if User B can afford it
+   - Opponent info shows User A's name, pack name, and "Packs: ×3"
+   - Hint text mentions opening 3 packs
+   - Cost row shows total entry cost, the breakdown "(3 × X cr)", and User B's credits
+   - "Join for X cr" button is enabled if User B can afford the total cost
 
 ---
 
@@ -111,22 +114,27 @@ If User B has fewer credits than the pack cost:
    - Modal closes
    - Full-screen result overlay appears with:
      - "You Won!" (purple gradient) or "You Lost" (grey) based on totals
-     - Pack name shown as subtitle
-     - Two side-by-side panels: User A's draw and User B's draw
+     - Subtitle shows pack name with "×3 Battle — Y cr total"
+     - Two side-by-side panels: User A's draw (3 packs worth) and User B's draw
      - Each panel shows: player name, total value in purple, all drawn cards with images and rarity badges
      - "Winner" label appears next to the winning player's name
      - If tiebreaker: "It was a tie — coin flip awarded victory to [name]" message shown
-   - Header shows User B's credits reduced by pack cost
+   - Header shows User B's credits reduced by total cost
 
 ---
 
-## Step 10 — Result overlay layout
+## Step 10 — Result overlay layout and scrollability
 
 Both sides shown simultaneously:
 - Left side: creator's drawn cards + total
 - Center: "VS" divider
 - Right side: opponent's drawn cards + total
 - Winner indicated by gold "Winner" label next to their name
+
+Scrollability test (important for high pack_quantity):
+- With ×10 packs, each side may show 30–50 cards
+- Verify the card area is scrollable and does NOT push the Close button off-screen
+- Close button must always be visible in a sticky bar at the bottom of the overlay
 
 ---
 
@@ -193,17 +201,22 @@ Both sides shown simultaneously:
 - [ ] Empty state shown when no open battles exist
 - [ ] "Start New Battle" opens pack selector modal
 - [ ] Pack tiles show name, image, cost
-- [ ] Selecting a pack shows cost row with credit check
-- [ ] Create button disabled until affordable pack selected
-- [ ] Creating a battle deducts credits from creator
-- [ ] New battle appears in list with CREATOR / PACK / COST columns
+- [ ] Selecting a pack shows quantity selector (×1/×2/×3/×5/×10) with ×1 pre-selected
+- [ ] Cost row shows per-pack cost, quantity, total cost, and user credits
+- [ ] Changing quantity updates total cost and button label in real time
+- [ ] Create button disabled until affordable pack+quantity selected
+- [ ] Creating a battle deducts credits by total cost (pack_cost × pack_quantity)
+- [ ] New battle appears in list with CREATOR / PACK (×qty badge if >1) / COST TO JOIN (total)
 - [ ] Open battles do NOT show creator's drawn cards or total
 - [ ] Creator's own battle shows "Your battle", not a Join button
 - [ ] "Join" button visible to other users
-- [ ] Join modal shows pack name, cost, and User B's credits
-- [ ] Join button disabled if insufficient credits
-- [ ] Joining deducts credits from opponent
+- [ ] Join modal shows pack name, quantity (if >1), total entry cost, and User B's credits
+- [ ] Join modal shows cost breakdown "(N × X cr)" when pack_quantity > 1
+- [ ] Join button disabled if insufficient credits for total cost
+- [ ] Joining deducts credits by total cost
 - [ ] Result overlay shows both players' drawn cards side by side
+- [ ] Result subtitle shows pack name, quantity (if >1), and total cost spent
+- [ ] Close button always visible in sticky bar — does not scroll off with many cards
 - [ ] Winner clearly indicated (label + win/lose heading)
 - [ ] Tiebreaker message shown on exact tie
 - [ ] Battle disappears from open list after completion

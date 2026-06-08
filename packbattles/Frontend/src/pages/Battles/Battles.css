@@ -579,6 +579,51 @@
     color: #fff;
 }
 
+/* ---- quantity selector (create modal) ---- */
+
+.bt-qty-selector {
+    display: flex;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+}
+
+.bt-qty-btn {
+    appearance: none;
+    -webkit-appearance: none;
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    background: rgba(33, 0, 75, 0.15);
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1.4rem;
+    font-weight: 600;
+    font-family: inherit;
+    padding: 0.6rem 1.4rem;
+    border-radius: 1rem;
+    cursor: pointer;
+    transition: border-color .2s ease, background .2s ease, color .2s ease;
+    user-select: none;
+}
+
+.bt-qty-btn:hover {
+    border-color: rgba(163, 91, 255, 0.5);
+    background: rgba(163, 91, 255, 0.1);
+    color: #fff;
+}
+
+.bt-qty-btn.selected {
+    border-color: #A35BFF;
+    background: rgba(163, 91, 255, 0.22);
+    color: #fff;
+}
+
+/* ---- inline quantity badge in battle list ---- */
+
+.bt-qty-badge {
+    color: #A35BFF;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
 /* ---- battle result overlay ---- */
 
 .bt-result-overlay {
@@ -588,19 +633,37 @@
     background: rgba(8, 6, 32, 0.96);
     backdrop-filter: blur(10px);
     display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    overflow-y: auto;
-    padding: 5rem 1.5rem 6rem;
+    flex-direction: column;
+    align-items: center;
 }
 
 .bt-result-inner {
     width: 100%;
     max-width: 1000px;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* scrollable content area — grows to fill space */
+.bt-result-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4rem 1.5rem 2rem;
     text-align: center;
 }
 
-.bt-result-inner h2 {
+/* sticky close bar — always visible at bottom */
+.bt-result-close-bar {
+    flex-shrink: 0;
+    padding: 1.4rem 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(8, 6, 32, 0.98);
+    text-align: center;
+}
+
+.bt-result-scroll h2 {
     font-size: 4rem;
     font-weight: 900;
     margin-bottom: 0.5rem;
@@ -746,7 +809,7 @@
         padding: 1.2rem 1rem;
     }
 
-    .bt-result-inner h2 {
+    .bt-result-scroll h2 {
         font-size: 3rem;
     }
 

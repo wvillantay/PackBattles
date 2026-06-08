@@ -14,6 +14,8 @@ const RARITY_COLOR = {
     ultra_rare: '#f59e0b',
 };
 
+const QTY_OPTIONS = [1, 2, 3, 5, 10];
+
 const Battles = () => {
     const { token, user, updateUser } = useAuth();
 
@@ -21,12 +23,13 @@ const Battles = () => {
     const [battlesLoading, setBattlesLoading] = useState(true);
     const [battlesError, setBattlesError]     = useState('');
 
-    const [packs, setPacks]           = useState([]);
+    const [packs, setPacks]               = useState([]);
     const [packsLoading, setPacksLoading] = useState(false);
 
     // Create modal
     const [showCreate, setShowCreate]     = useState(false);
     const [selectedPack, setSelectedPack] = useState(null);
+    const [selectedQty, setSelectedQty]   = useState(1);
     const [creating, setCreating]         = useState(false);
     const [createError, setCreateError]   = useState('');
 
@@ -65,22 +68,24 @@ const Battles = () => {
 
     const openCreateModal = () => {
         setSelectedPack(null);
+        setSelectedQty(1);
         setCreateError('');
         setShowCreate(true);
     };
 
     const handleCreate = () => {
         if (!selectedPack) return;
+        const totalCost = Number(selectedPack.cost) * selectedQty;
         setCreating(true);
         setCreateError('');
         axios
             .post(
                 `${API}/api/battles`,
-                { pack_id: selectedPack.id },
+                { pack_id: selectedPack.id, pack_quantity: selectedQty },
                 { headers: { Authorization: `Bearer ${token}` } },
             )
             .then(() => {
-                updateUser({ credits: Number(user.credits) - Number(selectedPack.cost) });
+                updateUser({ credits: Number(user.credits) - totalCost });
                 setShowCreate(false);
                 fetchBattles();
             })
@@ -99,7 +104,7 @@ const Battles = () => {
                 { headers: { Authorization: `Bearer ${token}` } },
             )
             .then(res => {
-                updateUser({ credits: Number(user.credits) - Number(joiningBattle.pack_cost) });
+                updateUser({ credits: Number(user.credits) - Number(joiningBattle.total_cost) });
                 setJoiningBattle(null);
                 setResult(res.data);
                 fetchBattles();
@@ -108,8 +113,9 @@ const Battles = () => {
             .finally(() => setJoining(false));
     };
 
-    const canAffordCreate = selectedPack && Number(user?.credits) >= Number(selectedPack.cost);
-    const canAffordJoin   = joiningBattle && Number(user?.credits) >= Number(joiningBattle.pack_cost);
+    const totalCreateCost = selectedPack ? Number(selectedPack.cost) * selectedQty : 0;
+    const canAffordCreate = selectedPack && Number(user?.credits) >= totalCreateCost;
+    const canAffordJoin   = joiningBattle && Number(user?.credits) >= Number(joiningBattle.total_cost);
 
     return (
         <>
@@ -169,8 +175,15 @@ const Battles = () => {
                                     {battles.map(battle => (
                                         <tr key={battle.id}>
                                             <td><p className="round">{battle.creator_name}</p></td>
-                                            <td><p>{battle.pack_name}</p></td>
-                                            <td><p>{battle.pack_cost} cr</p></td>
+                                            <td>
+                                                <p>
+                                                    {battle.pack_name}
+                                                    {battle.pack_quantity > 1 && (
+                                                        <span className="bt-qty-badge"> ×{battle.pack_quantity}</span>
+                                                    )}
+                                                </p>
+                                            </td>
+                                            <td><p>{battle.total_cost} cr</p></td>
                                             <td>
                                                 <div className="act-btns">
                                                     {battle.creator_id !== user?.id ? (
@@ -211,8 +224,9 @@ const Battles = () => {
                             </button>
                         </div>
                         <p className="bt-modal-hint">
-                            Choose a pack. You pay for it now and your draw stays hidden until
-                            an opponent joins &mdash; then both results are revealed simultaneously.
+                            Choose a pack and how many packs to open. You pay now and your draw
+                            stays hidden until an opponent joins &mdash; both results reveal
+                            simultaneously.
                         </p>
 
                         {packsLoading && <p className="bt-modal-status">Loading packs...</p>}
@@ -235,18 +249,42 @@ const Battles = () => {
                         </div>
 
                         {selectedPack && (
-                            <div className="bt-modal-cost-row">
-                                <span>Pack cost: <strong>{selectedPack.cost} cr</strong></span>
-                                <span>
-                                    Your credits:{' '}
-                                    <strong style={{ color: canAffordCreate ? '#A35BFF' : '#f87171' }}>
-                                        {user?.credits}
-                                    </strong>
-                                </span>
-                                {!canAffordCreate && (
-                                    <span className="bt-modal-error">Not enough credits.</span>
-                                )}
-                            </div>
+                            <>
+                                <p className="bt-modal-hint" style={{ marginBottom: '0.8rem' }}>
+                                    Packs to open:
+                                </p>
+                                <div className="bt-qty-selector">
+                                    {QTY_OPTIONS.map(q => (
+                                        <button
+                                            key={q}
+                                            className={`bt-qty-btn${selectedQty === q ? ' selected' : ''}`}
+                                            onClick={() => setSelectedQty(q)}
+                                        >
+                                            ×{q}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <div className="bt-modal-cost-row">
+                                    <span>Per pack: <strong>{selectedPack.cost} cr</strong></span>
+                                    <span>Quantity: <strong>×{selectedQty}</strong></span>
+                                    <span>
+                                        Total cost:{' '}
+                                        <strong style={{ color: canAffordCreate ? '#A35BFF' : '#f87171' }}>
+                                            {totalCreateCost} cr
+                                        </strong>
+                                    </span>
+                                    <span>
+                                        Your credits:{' '}
+                                        <strong style={{ color: canAffordCreate ? '#A35BFF' : '#f87171' }}>
+                                            {user?.credits}
+                                        </strong>
+                                    </span>
+                                    {!canAffordCreate && (
+                                        <span className="bt-modal-error">Not enough credits.</span>
+                                    )}
+                                </div>
+                            </>
                         )}
 
                         {createError && <p className="bt-modal-error">{createError}</p>}
@@ -260,7 +298,7 @@ const Battles = () => {
                                 onClick={handleCreate}
                                 disabled={!selectedPack || !canAffordCreate || creating}
                             >
-                                {creating ? 'Creating...' : 'Create Battle'}
+                                {creating ? 'Creating...' : `Create Battle (${totalCreateCost} cr)`}
                             </button>
                         </div>
                     </div>
@@ -284,15 +322,30 @@ const Battles = () => {
                         <div className="bt-modal-opponent">
                             <span>Creator: <strong>{joiningBattle.creator_name}</strong></span>
                             <span>Pack: <strong>{joiningBattle.pack_name}</strong></span>
+                            {joiningBattle.pack_quantity > 1 && (
+                                <span>Packs: <strong>×{joiningBattle.pack_quantity}</strong></span>
+                            )}
                         </div>
 
                         <p className="bt-modal-hint">
-                            You and your opponent both open the same pack. Higher total card value
-                            wins all drawn cards from both packs.
+                            You and your opponent each open {joiningBattle.pack_quantity > 1
+                                ? `${joiningBattle.pack_quantity} packs`
+                                : 'the same pack'
+                            }. Higher total card value wins all drawn cards from both sides.
                         </p>
 
                         <div className="bt-modal-cost-row">
-                            <span>Entry cost: <strong>{joiningBattle.pack_cost} cr</strong></span>
+                            <span>
+                                Entry cost:{' '}
+                                <strong style={{ color: canAffordJoin ? '#A35BFF' : '#f87171' }}>
+                                    {joiningBattle.total_cost} cr
+                                </strong>
+                            </span>
+                            {joiningBattle.pack_quantity > 1 && (
+                                <span>
+                                    ({joiningBattle.pack_quantity} × {joiningBattle.pack_cost} cr)
+                                </span>
+                            )}
                             <span>
                                 Your credits:{' '}
                                 <strong style={{ color: canAffordJoin ? '#A35BFF' : '#f87171' }}>
@@ -315,95 +368,103 @@ const Battles = () => {
                                 onClick={handleJoin}
                                 disabled={!canAffordJoin || joining}
                             >
-                                {joining ? 'Joining...' : `Join for ${joiningBattle.pack_cost} cr`}
+                                {joining ? 'Joining...' : `Join for ${joiningBattle.total_cost} cr`}
                             </button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* BATTLE RESULT OVERLAY */}
+            {/* BATTLE RESULT OVERLAY — sticky close bar so it's always reachable */}
             {result && (
                 <div className="bt-result-overlay">
                     <div className="bt-result-inner">
-                        <h2 className={result.winner_id === user?.id ? 'bt-result-win' : 'bt-result-lose'}>
-                            {result.winner_id === user?.id ? 'You Won!' : 'You Lost'}
-                        </h2>
+                        <div className="bt-result-scroll">
+                            <h2 className={result.winner_id === user?.id ? 'bt-result-win' : 'bt-result-lose'}>
+                                {result.winner_id === user?.id ? 'You Won!' : 'You Lost'}
+                            </h2>
 
-                        <p className="bt-result-pack-name">{result.pack_name} Battle</p>
-
-                        {result.tiebreaker && (
-                            <p className="bt-result-tiebreaker">
-                                It was a tie &mdash; coin flip awarded victory to{' '}
-                                {result.tiebreaker === 'creator'
-                                    ? result.creator_name
-                                    : result.opponent_name}
+                            <p className="bt-result-pack-name">
+                                {result.pack_name}
+                                {result.pack_quantity > 1 && ` ×${result.pack_quantity}`} Battle
+                                {' '}— {result.total_cost} cr total
                             </p>
-                        )}
 
-                        <div className="bt-result-reveals">
-                            {/* Creator's draw */}
-                            <div className="bt-result-side">
-                                <div className="bt-result-side-header">
-                                    <p className="bt-result-player-name">
-                                        {result.creator_name}
-                                        {result.winner_id === result.creator_id && (
-                                            <span className="bt-result-crown"> Winner</span>
-                                        )}
-                                    </p>
-                                    <p className="bt-result-side-total">{result.creator_total} cr</p>
-                                </div>
-                                <div className="bt-result-card-list">
-                                    {result.creator_cards.map((card, i) => (
-                                        <div key={`c-${i}`} className="bt-result-card">
-                                            <img src={card.image_url} alt={card.name} />
-                                            <span
-                                                className="bt-result-card-rarity"
-                                                style={{ background: RARITY_COLOR[card.rarity] || '#9ca3af' }}
-                                            >
-                                                {card.rarity.replace('_', ' ').toUpperCase()}
-                                            </span>
-                                            <p>{card.name}</p>
-                                            <span className="bt-result-card-value">{card.value} cr</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
+                            {result.tiebreaker && (
+                                <p className="bt-result-tiebreaker">
+                                    It was a tie &mdash; coin flip awarded victory to{' '}
+                                    {result.tiebreaker === 'creator'
+                                        ? result.creator_name
+                                        : result.opponent_name}
+                                </p>
+                            )}
 
-                            <div className="bt-result-vs-divider">VS</div>
-
-                            {/* Opponent's draw */}
-                            <div className="bt-result-side">
-                                <div className="bt-result-side-header">
-                                    <p className="bt-result-player-name">
-                                        {result.opponent_name}
-                                        {result.winner_id === result.opponent_id && (
-                                            <span className="bt-result-crown"> Winner</span>
-                                        )}
-                                    </p>
-                                    <p className="bt-result-side-total">{result.opponent_total} cr</p>
+                            <div className="bt-result-reveals">
+                                {/* Creator's draw */}
+                                <div className="bt-result-side">
+                                    <div className="bt-result-side-header">
+                                        <p className="bt-result-player-name">
+                                            {result.creator_name}
+                                            {result.winner_id === result.creator_id && (
+                                                <span className="bt-result-crown"> Winner</span>
+                                            )}
+                                        </p>
+                                        <p className="bt-result-side-total">{result.creator_total} cr</p>
+                                    </div>
+                                    <div className="bt-result-card-list">
+                                        {result.creator_cards.map((card, i) => (
+                                            <div key={`c-${i}`} className="bt-result-card">
+                                                <img src={card.image_url} alt={card.name} />
+                                                <span
+                                                    className="bt-result-card-rarity"
+                                                    style={{ background: RARITY_COLOR[card.rarity] || '#9ca3af' }}
+                                                >
+                                                    {card.rarity.replace('_', ' ').toUpperCase()}
+                                                </span>
+                                                <p>{card.name}</p>
+                                                <span className="bt-result-card-value">{card.value} cr</span>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
-                                <div className="bt-result-card-list">
-                                    {result.opponent_cards.map((card, i) => (
-                                        <div key={`o-${i}`} className="bt-result-card">
-                                            <img src={card.image_url} alt={card.name} />
-                                            <span
-                                                className="bt-result-card-rarity"
-                                                style={{ background: RARITY_COLOR[card.rarity] || '#9ca3af' }}
-                                            >
-                                                {card.rarity.replace('_', ' ').toUpperCase()}
-                                            </span>
-                                            <p>{card.name}</p>
-                                            <span className="bt-result-card-value">{card.value} cr</span>
-                                        </div>
-                                    ))}
+
+                                <div className="bt-result-vs-divider">VS</div>
+
+                                {/* Opponent's draw */}
+                                <div className="bt-result-side">
+                                    <div className="bt-result-side-header">
+                                        <p className="bt-result-player-name">
+                                            {result.opponent_name}
+                                            {result.winner_id === result.opponent_id && (
+                                                <span className="bt-result-crown"> Winner</span>
+                                            )}
+                                        </p>
+                                        <p className="bt-result-side-total">{result.opponent_total} cr</p>
+                                    </div>
+                                    <div className="bt-result-card-list">
+                                        {result.opponent_cards.map((card, i) => (
+                                            <div key={`o-${i}`} className="bt-result-card">
+                                                <img src={card.image_url} alt={card.name} />
+                                                <span
+                                                    className="bt-result-card-rarity"
+                                                    style={{ background: RARITY_COLOR[card.rarity] || '#9ca3af' }}
+                                                >
+                                                    {card.rarity.replace('_', ' ').toUpperCase()}
+                                                </span>
+                                                <p>{card.name}</p>
+                                                <span className="bt-result-card-value">{card.value} cr</span>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <button className="bt-btn-primary" onClick={() => setResult(null)}>
-                            Close
-                        </button>
+                        <div className="bt-result-close-bar">
+                            <button className="bt-btn-primary" onClick={() => setResult(null)}>
+                                Close
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
