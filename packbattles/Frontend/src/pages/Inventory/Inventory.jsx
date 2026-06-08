@@ -69,7 +69,7 @@ const Inventory = () => {
 
                     {!loading && items.length > 0 && (
                         <p className="inv-count" data-aos="fade-up">
-                            {items.length} card{items.length !== 1 ? 's' : ''} owned
+                            {items.reduce((sum, item) => sum + Number(item.quantity || 0), 0)} cards owned
                         </p>
                     )}
 

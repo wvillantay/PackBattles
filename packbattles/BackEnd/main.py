@@ -299,6 +299,300 @@ def get_inventory():
 
 
 # ---------------------------------------------------------------------------
+# Battle routes  (Duel Battle MVP — pack-based)
+# ---------------------------------------------------------------------------
+
+def _draw_from_pack(pack):
+    """
+    Randomly draw cards from a pack's weighted pool.
+    Returns (drawn_card_oids, drawn_card_docs, total_value).
+    Does NOT deduct credits or touch inventory.
+    """
+    pool    = pack["pool"]
+    ids     = [e["card_id"] for e in pool]
+    weights = [e["weight"]  for e in pool]
+    drawn   = random.choices(ids, weights=weights, k=pack["cards_per_open"])
+    docs    = [mongo.db.cards.find_one({"_id": cid}) for cid in drawn]
+    total   = sum(float(d["value"]) for d in docs if d)
+    return drawn, docs, total
+
+
+def _card_detail(card):
+    return {
+        "id":        str(card["_id"]),
+        "name":      card["name"],
+        "image_url": card["image_url"],
+        "rarity":    card["rarity"],
+        "value":     card["value"],
+    }
+
+
+@app.route("/api/battles", methods=["GET"])
+@require_auth
+def list_battles():
+    """
+    Open battles — creator's draw is deliberately hidden.
+    Only exposes: id, creator name, pack name, pack cost.
+    """
+    battles = list(
+        mongo.db.battles.find({"status": "open"})
+        .sort("created_at", -1)
+        .limit(50)
+    )
+    result = []
+    for b in battles:
+        creator = mongo.db.users.find_one({"_id": b["creator_id"]}, {"name": 1})
+        pack    = mongo.db.packs.find_one({"_id": b["pack_id"]},    {"name": 1, "cost": 1})
+        result.append({
+            "id":           str(b["_id"]),
+            "creator_id":   str(b["creator_id"]),
+            "creator_name": creator["name"] if creator else "Unknown",
+            "pack_id":      str(b["pack_id"]),
+            "pack_name":    pack["name"]    if pack    else "Unknown",
+            "pack_cost":    pack["cost"]    if pack    else 0,
+            "created_at":   b["created_at"].isoformat(),
+        })
+    return jsonify(result)
+
+
+@app.route("/api/battles", methods=["POST"])
+@require_auth
+def create_battle():
+    """
+    Create an open Duel Battle for a specific pack type.
+    The creator pays for and opens that pack immediately; their draw is stored
+    server-side and kept hidden until an opponent joins.
+    """
+    data    = request.get_json(silent=True) or {}
+    pack_id = data.get("pack_id", "")
+
+    if not pack_id:
+        return jsonify({"error": "pack_id is required"}), 400
+
+    try:
+        pack_oid = ObjectId(pack_id)
+    except Exception:
+        return jsonify({"error": "Invalid pack_id"}), 400
+
+    pack = mongo.db.packs.find_one({"_id": pack_oid})
+    if not pack:
+        return jsonify({"error": "Pack not found"}), 404
+
+    creator_id = ObjectId(g.user_id)
+    user       = mongo.db.users.find_one({"_id": creator_id})
+    if user["credits"] < pack["cost"]:
+        return jsonify({"error": "Insufficient credits"}), 400
+
+    # Draw the creator's pack — stored hidden until the battle resolves
+    drawn_ids, _drawn_docs, creator_total = _draw_from_pack(pack)
+
+    # Deduct pack cost from creator
+    mongo.db.users.update_one(
+        {"_id": creator_id},
+        {"$inc": {"credits": -pack["cost"]}},
+    )
+
+    now    = datetime.now(timezone.utc)
+    result = mongo.db.battles.insert_one({
+        "type":           "duel",
+        "status":         "open",
+        "pack_id":        pack_oid,
+        "pack_cost":      pack["cost"],
+        "creator_id":     creator_id,
+        "creator_cards":  drawn_ids,
+        "creator_total":  creator_total,
+        "opponent_id":    None,
+        "opponent_cards": None,
+        "opponent_total": None,
+        "winner_id":      None,
+        "tiebreaker":     None,
+        "created_at":     now,
+        "completed_at":   None,
+    })
+
+    # Return only metadata — creator's draw is intentionally omitted
+    return jsonify({
+        "id":         str(result.inserted_id),
+        "status":     "open",
+        "creator_id": str(creator_id),
+        "pack_id":    str(pack_oid),
+        "pack_name":  pack["name"],
+        "pack_cost":  pack["cost"],
+        "created_at": now.isoformat(),
+    }), 201
+
+
+@app.route("/api/battles/<battle_id>", methods=["GET"])
+@require_auth
+def get_battle(battle_id):
+    """
+    Fetch a single battle.
+    While status == 'open': creator's draw is hidden.
+    While status == 'completed': both draws and the winner are revealed.
+    """
+    try:
+        bid = ObjectId(battle_id)
+    except Exception:
+        return jsonify({"error": "Invalid battle id"}), 400
+
+    battle = mongo.db.battles.find_one({"_id": bid})
+    if not battle:
+        return jsonify({"error": "Battle not found"}), 404
+
+    pack = mongo.db.packs.find_one({"_id": battle["pack_id"]}, {"name": 1, "cost": 1})
+
+    base = {
+        "id":         str(battle["_id"]),
+        "type":       battle["type"],
+        "status":     battle["status"],
+        "pack_id":    str(battle["pack_id"]),
+        "pack_name":  pack["name"] if pack else "Unknown",
+        "pack_cost":  pack["cost"] if pack else 0,
+        "creator_id": str(battle["creator_id"]),
+        "created_at": battle["created_at"].isoformat(),
+    }
+
+    if battle["status"] == "completed":
+        creator  = mongo.db.users.find_one({"_id": battle["creator_id"]}, {"name": 1})
+        opponent = mongo.db.users.find_one({"_id": battle["opponent_id"]}, {"name": 1})
+        base.update({
+            "creator_name":   creator["name"]  if creator  else "Unknown",
+            "creator_total":  battle["creator_total"],
+            "creator_cards":  [_card_detail(mongo.db.cards.find_one({"_id": cid}))
+                               for cid in battle["creator_cards"]],
+            "opponent_id":    str(battle["opponent_id"]),
+            "opponent_name":  opponent["name"] if opponent else "Unknown",
+            "opponent_total": battle["opponent_total"],
+            "opponent_cards": [_card_detail(mongo.db.cards.find_one({"_id": cid}))
+                               for cid in battle["opponent_cards"]],
+            "winner_id":      str(battle["winner_id"]),
+            "tiebreaker":     battle.get("tiebreaker"),
+            "completed_at":   battle["completed_at"].isoformat(),
+        })
+
+    return jsonify(base)
+
+
+@app.route("/api/battles/<battle_id>/join", methods=["POST"])
+@require_auth
+def join_battle(battle_id):
+    """
+    Join an open Duel Battle:
+      1. Opponent pays for and opens the same pack.
+      2. Both draws are compared (higher total wins).
+      3. Exact tie → server-side coin flip.
+      4. Winner receives all drawn cards from both packs.
+      5. Full result (both draws revealed simultaneously) is returned.
+    """
+    try:
+        bid = ObjectId(battle_id)
+    except Exception:
+        return jsonify({"error": "Invalid battle id"}), 400
+
+    battle = mongo.db.battles.find_one({"_id": bid})
+    if not battle:
+        return jsonify({"error": "Battle not found"}), 404
+    if battle["status"] != "open":
+        return jsonify({"error": "Battle is already completed"}), 400
+
+    opponent_id = ObjectId(g.user_id)
+    if battle["creator_id"] == opponent_id:
+        return jsonify({"error": "You cannot join your own battle"}), 400
+
+    pack = mongo.db.packs.find_one({"_id": battle["pack_id"]})
+    if not pack:
+        return jsonify({"error": "Pack no longer exists"}), 404
+
+    opponent = mongo.db.users.find_one({"_id": opponent_id})
+    if opponent["credits"] < pack["cost"]:
+        return jsonify({"error": "Insufficient credits"}), 400
+
+    # Draw opponent's pack
+    opp_drawn_ids, opp_drawn_docs, opponent_total = _draw_from_pack(pack)
+
+    # Deduct pack cost from opponent
+    mongo.db.users.update_one(
+        {"_id": opponent_id},
+        {"$inc": {"credits": -pack["cost"]}},
+    )
+
+    # Resolve: higher total wins; exact tie → coin flip
+    creator_total = battle["creator_total"]
+    tiebreaker    = None
+
+    if creator_total > opponent_total:
+        winner_id = battle["creator_id"]
+    elif opponent_total > creator_total:
+        winner_id = opponent_id
+    else:
+        flip       = random.choice(["creator", "opponent"])
+        tiebreaker = flip
+        winner_id  = battle["creator_id"] if flip == "creator" else opponent_id
+
+    loser_id  = opponent_id if winner_id == battle["creator_id"] else battle["creator_id"]
+    now       = datetime.now(timezone.utc)
+    all_cards = battle["creator_cards"] + opp_drawn_ids
+
+    # Transfer all drawn cards to winner's inventory
+    for cid in all_cards:
+        mongo.db.inventory.update_one(
+            {"user_id": winner_id, "card_id": cid},
+            {
+                "$inc":         {"quantity": 1},
+                "$setOnInsert": {"acquired_at": now},
+            },
+            upsert=True,
+        )
+
+    # Update win / loss records
+    mongo.db.users.update_one({"_id": winner_id}, {"$inc": {"wins":   1}})
+    mongo.db.users.update_one({"_id": loser_id},  {"$inc": {"losses": 1}})
+
+    # Finalise battle document
+    mongo.db.battles.update_one(
+        {"_id": bid},
+        {"$set": {
+            "status":         "completed",
+            "opponent_id":    opponent_id,
+            "opponent_cards": opp_drawn_ids,
+            "opponent_total": opponent_total,
+            "winner_id":      winner_id,
+            "tiebreaker":     tiebreaker,
+            "completed_at":   now,
+        }},
+    )
+
+    # Build full card detail lists for the simultaneous reveal
+    creator_card_details  = [
+        _card_detail(mongo.db.cards.find_one({"_id": cid}))
+        for cid in battle["creator_cards"]
+    ]
+    opponent_card_details = [_card_detail(d) for d in opp_drawn_docs if d]
+
+    creator  = mongo.db.users.find_one({"_id": battle["creator_id"]}, {"name": 1})
+    opp_user = mongo.db.users.find_one({"_id": opponent_id},           {"name": 1})
+
+    return jsonify({
+        "id":             str(bid),
+        "status":         "completed",
+        "pack_id":        str(battle["pack_id"]),
+        "pack_name":      pack["name"],
+        "pack_cost":      pack["cost"],
+        "creator_id":     str(battle["creator_id"]),
+        "creator_name":   creator["name"]  if creator  else "Unknown",
+        "creator_total":  creator_total,
+        "creator_cards":  creator_card_details,
+        "opponent_id":    str(opponent_id),
+        "opponent_name":  opp_user["name"] if opp_user else "Unknown",
+        "opponent_total": opponent_total,
+        "opponent_cards": opponent_card_details,
+        "winner_id":      str(winner_id),
+        "tiebreaker":     tiebreaker,
+        "completed_at":   now.isoformat(),
+    })
+
+
+# ---------------------------------------------------------------------------
 # Health check
 # ---------------------------------------------------------------------------
 

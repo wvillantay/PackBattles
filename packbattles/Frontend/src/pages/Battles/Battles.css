@@ -310,3 +310,459 @@
 
 
 /* TABLE SECTION END */
+
+/* ---- table status / empty states ---- */
+
+.bt-status,
+.bt-empty {
+    color: rgba(255, 255, 255, 0.5);
+    text-align: center;
+    font-size: 1.6rem;
+    margin-top: 5rem;
+}
+
+.bt-error {
+    color: #f87171;
+    text-align: center;
+    font-size: 1.5rem;
+    margin-top: 5rem;
+}
+
+.bt-own-label {
+    color: rgba(163, 91, 255, 0.7);
+    font-size: 1.3rem;
+    font-style: italic;
+}
+
+/* ---- modal overlay ---- */
+
+.bt-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: rgba(8, 6, 32, 0.88);
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    overflow-y: auto;
+    padding: 4rem 1.5rem 6rem;
+}
+
+.bt-modal {
+    width: 100%;
+    max-width: 800px;
+    background: rgba(18, 10, 50, 0.97);
+    border: 1px solid rgba(163, 91, 255, 0.25);
+    border-radius: 2rem;
+    padding: 3rem;
+    box-shadow: 0 30px 80px rgba(7, 5, 35, 0.85);
+}
+
+.bt-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+}
+
+.bt-modal-header h3 {
+    color: #fff;
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.bt-modal-close {
+    appearance: none;
+    -webkit-appearance: none;
+    border: none;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    font-size: 1.6rem;
+    width: 3.6rem;
+    height: 3.6rem;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .25s ease;
+    flex-shrink: 0;
+}
+
+.bt-modal-close:hover {
+    background: rgba(163, 91, 255, 0.35);
+}
+
+.bt-modal-hint {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 1.4rem;
+    margin-bottom: 2rem;
+}
+
+.bt-modal-opponent {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    padding: 1.2rem 1.8rem;
+    border-radius: 1rem;
+    background: rgba(163, 91, 255, 0.08);
+    border: 1px solid rgba(163, 91, 255, 0.2);
+    margin-bottom: 2rem;
+    font-size: 1.5rem;
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.bt-modal-opponent strong {
+    color: #A35BFF;
+}
+
+/* ---- pack picker (create modal) ---- */
+
+.bt-pack-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.bt-pack-tile {
+    cursor: pointer;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1.5rem;
+    background: rgba(33, 0, 75, 0.15);
+    padding: 1.5rem 1.2rem;
+    text-align: center;
+    width: 150px;
+    transition: border-color .2s ease, background .2s ease;
+    user-select: none;
+}
+
+.bt-pack-tile:hover {
+    border-color: rgba(163, 91, 255, 0.5);
+    background: rgba(163, 91, 255, 0.08);
+}
+
+.bt-pack-tile.selected {
+    border-color: #A35BFF;
+    background: rgba(163, 91, 255, 0.18);
+}
+
+.bt-pack-tile img {
+    width: 80px;
+    height: auto;
+    margin: 0 auto 1rem;
+    display: block;
+}
+
+.bt-pack-tile-name {
+    color: #fff;
+    font-size: 1.35rem;
+    font-weight: 600;
+    margin: 0 0 0.4rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bt-pack-tile-cost {
+    color: #A35BFF;
+    font-size: 1.3rem;
+    font-weight: 500;
+    margin: 0;
+}
+
+/* ---- modal cost row ---- */
+
+.bt-modal-cost-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1.2rem 1.8rem;
+    border-radius: 1rem;
+    background: rgba(163, 91, 255, 0.06);
+    border: 1px solid rgba(163, 91, 255, 0.15);
+    margin-bottom: 1.5rem;
+    font-size: 1.4rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.bt-modal-cost-row strong {
+    color: #fff;
+}
+
+/* ---- modal feedback ---- */
+
+.bt-modal-status {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 1.4rem;
+    text-align: center;
+    padding: 2rem 0;
+    margin: 0;
+}
+
+.bt-modal-error {
+    color: #f87171;
+    font-size: 1.4rem;
+    margin: 0.8rem 0;
+}
+
+.bt-modal-total {
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 1.4rem;
+    margin-bottom: 1.5rem;
+}
+
+.bt-modal-total strong {
+    color: #A35BFF;
+}
+
+/* ---- modal action buttons ---- */
+
+.bt-modal-actions {
+    display: flex;
+    gap: 1.2rem;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    margin-top: 0.5rem;
+}
+
+.bt-btn-primary {
+    appearance: none;
+    -webkit-appearance: none;
+    border: none;
+    outline: none;
+    display: inline-block;
+    padding: 1.1rem 2.8rem;
+    border-radius: 1.5rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-family: inherit;
+    color: #fff;
+    background: linear-gradient(180deg, #A35BFF 0%, #811FFF 100%);
+    cursor: pointer;
+    transition: background .35s ease, opacity .25s ease;
+}
+
+.bt-btn-primary:hover:not(:disabled) {
+    background: linear-gradient(260deg, #A35BFF 0%, #811FFF 100%);
+}
+
+.bt-btn-primary:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+.bt-btn-outline {
+    appearance: none;
+    -webkit-appearance: none;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    outline: none;
+    display: inline-block;
+    padding: 1.1rem 2.8rem;
+    border-radius: 1.5rem;
+    font-size: 1.5rem;
+    font-weight: 600;
+    font-family: inherit;
+    color: #A35BFF;
+    background: transparent;
+    cursor: pointer;
+    transition: background .3s ease, color .3s ease;
+}
+
+.bt-btn-outline:hover {
+    background: rgba(163, 91, 255, 0.12);
+    color: #fff;
+}
+
+/* ---- battle result overlay ---- */
+
+.bt-result-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 3000;
+    background: rgba(8, 6, 32, 0.96);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    overflow-y: auto;
+    padding: 5rem 1.5rem 6rem;
+}
+
+.bt-result-inner {
+    width: 100%;
+    max-width: 1000px;
+    text-align: center;
+}
+
+.bt-result-inner h2 {
+    font-size: 4rem;
+    font-weight: 900;
+    margin-bottom: 0.5rem;
+}
+
+.bt-result-win {
+    background: linear-gradient(180deg, #A35BFF 0%, #811FFF 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.bt-result-lose {
+    color: rgba(255, 255, 255, 0.45);
+}
+
+.bt-result-pack-name {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.bt-result-tiebreaker {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+/* Side-by-side card reveals */
+.bt-result-reveals {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 2rem;
+    margin: 2.5rem 0 3rem;
+    flex-wrap: wrap;
+}
+
+.bt-result-side {
+    flex: 1;
+    min-width: 220px;
+    max-width: 440px;
+}
+
+.bt-result-side-header {
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.bt-result-player-name {
+    color: #fff;
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin: 0 0 0.4rem;
+}
+
+.bt-result-crown {
+    color: #f59e0b;
+    font-size: 1.4rem;
+    font-weight: 600;
+}
+
+.bt-result-side-total {
+    color: #A35BFF;
+    font-size: 2.2rem;
+    font-weight: 800;
+    margin: 0;
+}
+
+.bt-result-vs-divider {
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 2rem;
+    font-weight: 700;
+    align-self: center;
+    flex-shrink: 0;
+    padding: 0 0.5rem;
+}
+
+.bt-result-card-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.bt-result-card {
+    width: 110px;
+    text-align: center;
+    background: rgba(33, 0, 75, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1rem;
+    padding: 0.7rem;
+    position: relative;
+}
+
+.bt-result-card img {
+    width: 100%;
+    border-radius: 0.7rem;
+    display: block;
+}
+
+.bt-result-card-rarity {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #fff;
+    padding: 0.1rem 0.4rem;
+    border-radius: 0.35rem;
+    line-height: 1.5;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.bt-result-card p {
+    color: #fff;
+    font-size: 1rem;
+    margin: 0.5rem 0 0.2rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0;
+}
+
+.bt-result-card-value {
+    color: #A35BFF;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+@media (max-width: 767px) {
+    .bt-modal {
+        padding: 2rem 1.5rem;
+    }
+
+    .bt-pack-picker {
+        gap: 1rem;
+    }
+
+    .bt-pack-tile {
+        width: 130px;
+        padding: 1.2rem 1rem;
+    }
+
+    .bt-result-inner h2 {
+        font-size: 3rem;
+    }
+
+    .bt-result-reveals {
+        gap: 1.5rem;
+    }
+
+    .bt-result-vs-divider {
+        width: 100%;
+        text-align: center;
+        padding: 1rem 0;
+        align-self: auto;
+    }
+
+    .bt-result-side {
+        max-width: 100%;
+        width: 100%;
+    }
+}
