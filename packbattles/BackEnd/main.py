@@ -237,19 +237,22 @@ def open_pack(pack_id):
     )
 
     now = datetime.now(timezone.utc)
-    for card in drawn_cards:
-        mongo.db.inventory.update_one(
-            {"user_id": ObjectId(g.user_id), "card_id": card["_id"]},
-            {
-                "$inc":       {"quantity": 1},
-                "$setOnInsert": {
-                    "user_id":     ObjectId(g.user_id),
-                    "card_id":     card["_id"],
-                    "acquired_at": now,
+    try:
+        for card in drawn_cards:
+            # user_id and card_id are already in the filter; MongoDB writes them
+            # to the new document automatically on upsert-insert.  Repeating them
+            # inside $setOnInsert creates a conflicting-path error that MongoDB
+            # swallows silently (no exception raised, no document written).
+            mongo.db.inventory.update_one(
+                {"user_id": ObjectId(g.user_id), "card_id": card["_id"]},
+                {
+                    "$inc":         {"quantity": 1},
+                    "$setOnInsert": {"acquired_at": now},
                 },
-            },
-            upsert=True,
-        )
+                upsert=True,
+            )
+    except Exception as exc:
+        return jsonify({"error": f"Inventory write failed: {exc}"}), 500
 
     return jsonify({
         "credits_remaining": new_credits,
@@ -264,6 +267,35 @@ def open_pack(pack_id):
             for c in drawn_cards
         ],
     })
+
+
+# ---------------------------------------------------------------------------
+# Inventory routes
+# ---------------------------------------------------------------------------
+
+@app.route("/api/inventory", methods=["GET"])
+@require_auth
+def get_inventory():
+    RARITY_ORDER = {"ultra_rare": 0, "rare": 1, "uncommon": 2, "common": 3}
+
+    rows = mongo.db.inventory.find({"user_id": ObjectId(g.user_id)})
+
+    result = []
+    for row in rows:
+        card = mongo.db.cards.find_one({"_id": row["card_id"]})
+        if card:
+            result.append({
+                "inventory_id": str(row["_id"]),
+                "card_id":      str(card["_id"]),
+                "name":         card["name"],
+                "image_url":    card["image_url"],
+                "rarity":       card["rarity"],
+                "value":        card["value"],
+                "quantity":     row["quantity"],
+            })
+
+    result.sort(key=lambda x: (RARITY_ORDER.get(x["rarity"], 99), x["name"]))
+    return jsonify(result)
 
 
 # ---------------------------------------------------------------------------

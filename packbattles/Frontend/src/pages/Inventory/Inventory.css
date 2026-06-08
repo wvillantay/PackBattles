@@ -1,0 +1,199 @@
+.inventory {
+    padding: 8rem 0;
+    position: relative;
+    min-height: 60vh;
+}
+
+.inventory .packs-bg {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.inventory .packs-bg:after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(rgb(8, 6, 32, .5), rgb(8, 6, 32, .5));
+}
+
+.inventory .bg-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.inventory .packs-bg .bar-img {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    background: linear-gradient(transparent, rgb(8, 6, 32) 90%);
+}
+
+/* Elevate content above the background overlay */
+.inventory .container {
+    position: relative;
+    z-index: 1;
+}
+
+.inventory h2 {
+    color: #fff;
+    text-align: center;
+    margin-bottom: 0.5rem;
+}
+
+/* ---- status / empty states ---- */
+
+.inv-status {
+    color: rgba(255, 255, 255, 0.6);
+    text-align: center;
+    font-size: 1.6rem;
+    margin-top: 6rem;
+}
+
+.inv-alert {
+    font-size: 1.4rem;
+    margin-top: 2rem;
+}
+
+.inv-empty {
+    text-align: center;
+    margin-top: 6rem;
+}
+
+.inv-empty p {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 1.6rem;
+    margin-bottom: 2rem;
+}
+
+.inv-cta-btn {
+    display: inline-block;
+    padding: 1.2rem 3rem;
+    border-radius: 1.5rem;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(180deg, #A35BFF 0%, #811FFF 100%);
+    text-decoration: none;
+    transition: background .4s ease;
+}
+
+.inv-cta-btn:hover {
+    background: linear-gradient(260deg, #A35BFF 0%, #811FFF 100%);
+    color: #fff;
+}
+
+/* ---- card count ---- */
+
+.inv-count {
+    color: rgba(255, 255, 255, 0.45);
+    text-align: center;
+    font-size: 1.4rem;
+    margin-bottom: 3rem;
+}
+
+/* ---- card grid ---- */
+
+.inv-grid {
+    margin-top: 1rem;
+    row-gap: 0;
+}
+
+.inv-card {
+    margin-bottom: 2.5rem;
+}
+
+.inv-card-img {
+    position: relative;
+    border-radius: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    background: rgba(33, 0, 75, 0.10);
+    box-shadow: 0 20px 60px rgba(7, 5, 35, 0.65);
+    backdrop-filter: blur(10px);
+    padding: 0.8rem;
+    overflow: hidden;
+}
+
+.inv-card-img img {
+    border-radius: 1rem;
+    display: block;
+    width: 100%;
+}
+
+/* rarity badge — top-left */
+.inv-rarity-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #fff;
+    padding: 0.2rem 0.7rem;
+    border-radius: 0.5rem;
+    line-height: 1.5;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+/* quantity badge — top-right, only shown when qty > 1 */
+.inv-qty-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.60);
+    padding: 0.15rem 0.6rem;
+    border-radius: 0.5rem;
+    line-height: 1.5;
+}
+
+/* ---- card body ---- */
+
+.inv-card-body {
+    margin-top: 0.9rem;
+    text-align: center;
+    padding: 0 0.2rem;
+}
+
+.inv-card-name {
+    color: #fff;
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 0.3rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.inv-card-value {
+    color: #A35BFF;
+    font-size: 1.2rem;
+    font-weight: 500;
+}
+
+/* ---- responsive ---- */
+
+@media (max-width: 575px) {
+    .inv-card-name {
+        font-size: 1.1rem;
+    }
+
+    .inv-card-value {
+        font-size: 1.1rem;
+    }
+
+    .inv-rarity-badge {
+        font-size: 0.8rem;
+    }
+}

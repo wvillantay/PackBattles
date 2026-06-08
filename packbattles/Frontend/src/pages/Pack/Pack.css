@@ -10,7 +10,16 @@
     transform: translateX(-50%);
     width: 100%;
     height: 100%;
+    pointer-events: none; /* decorative only — never intercept clicks */
+}
 
+/* Ensure the main content sits above the background overlay in stacking order.
+   Without this, position:absolute on .packs-bg (stacking step 6) paints over
+   the non-positioned .container (stacking step 3), dimming buttons grey and
+   intercepting all pointer events before they reach the button. */
+.pack .container {
+    position: relative;
+    z-index: 1;
 }
 
 .pack .packs-bg:after {
@@ -51,6 +60,168 @@
 .pack .pk-card .pack-img  img{
     max-width: 230px ;
     margin: auto;
+}
+
+/* Pack info tag and open button (replacing the old <a> tags) */
+.pack .pk-card .pack-btns .pack-info-tag {
+    display: block;
+    border-radius: 2rem;
+    background: rgba(255, 255, 255, 0.11);
+    color: #A35BFF;
+    font-size: 1.6rem;
+    font-weight: 500;
+    margin: 1rem auto;
+    padding: 1.6rem 1rem;
+}
+
+.pack .pk-card .pack-btns .pack-open-btn {
+    appearance: none;
+    -webkit-appearance: none;
+    box-sizing: border-box;
+    border: none;
+    outline: none;
+    box-shadow: none;
+    display: block;
+    width: 100%;
+    margin: 1rem auto;
+    padding: 1.6rem 1rem;
+    border-radius: 2rem;
+    cursor: pointer;
+    color: #FFF;
+    font-size: 1.8rem;
+    font-weight: 800;
+    font-family: inherit;
+    line-height: 1.2;
+    text-align: center;
+    text-decoration: none;
+    background: linear-gradient(180deg, #A35BFF 0%, #811FFF 100%);
+    transition: background .5s ease, opacity .3s ease;
+}
+
+.pack .pk-card .pack-btns .pack-open-btn:hover:not(:disabled) {
+    background: linear-gradient(260deg, #A35BFF 0%, #811FFF 100%);
+}
+
+.pack .pk-card .pack-btns .pack-open-btn:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+}
+
+/* Card pool chance display */
+.cards .card-pack .card-pool-chance {
+    display: inline-block;
+    color: #A35BFF;
+    font-size: 1.6rem;
+    font-weight: 600;
+    padding: 0.5rem 1.5rem;
+    border-radius: 40rem;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(33, 0, 75, 0.07);
+    backdrop-filter: blur(10px);
+}
+
+/* Pack result overlay */
+.pack-result-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: rgba(8, 6, 32, 0.92);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    overflow-y: auto;
+    padding: 4rem 1.5rem;
+}
+
+.pack-result-inner {
+    width: 100%;
+    max-width: 900px;
+    text-align: center;
+}
+
+.pack-result-inner h2 {
+    color: #fff;
+    font-size: 3.2rem;
+    margin-bottom: 0.5rem;
+}
+
+.pack-result-credits {
+    color: #A35BFF;
+    font-size: 1.6rem;
+    margin-bottom: 2.5rem;
+}
+
+.pack-result-cards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    justify-content: center;
+    margin-bottom: 3rem;
+}
+
+.result-card-item {
+    width: 150px;
+    text-align: center;
+}
+
+.result-card-item .card-pk-img {
+    border-radius: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(33, 0, 75, 0.07);
+    box-shadow: 0px 20px 80px 0px rgba(7, 5, 35, 0.75);
+    backdrop-filter: blur(10px);
+    padding: 1rem;
+    position: relative;
+}
+
+.result-card-item p {
+    color: #fff;
+    font-size: 1.3rem;
+    margin: 0.8rem 0 0.3rem;
+}
+
+.result-card-item .card-value {
+    color: #A35BFF;
+    font-size: 1.3rem;
+    font-weight: 600;
+}
+
+.pack-result-actions {
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.form-btn {
+    display: inline-block;
+    padding: 1.2rem 3rem;
+    border-radius: 1.5rem;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(180deg, #A35BFF 0%, #811FFF 100%);
+    border: none;
+    cursor: pointer;
+    transition: .4s ease;
+    text-decoration: none;
+}
+
+.form-btn:hover {
+    background: linear-gradient(260deg, #A35BFF 0%, #811FFF 100%);
+    color: #fff;
+}
+
+.form-btn-outline {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: #A35BFF;
+}
+
+.form-btn-outline:hover {
+    background: rgba(163, 91, 255, 0.15);
+    color: #fff;
 }
 
 .pack .pk-card .pack-btns a {
