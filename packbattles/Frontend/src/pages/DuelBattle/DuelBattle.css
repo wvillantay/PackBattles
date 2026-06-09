@@ -346,6 +346,31 @@
     margin: 0;
 }
 
+/* ---- Battle Bot button (in opponent waiting panel, creator only) ---- */
+
+.db-bot-btn {
+    all: unset;
+    display: inline-block;
+    color: #fff;
+    font-size: 1.2rem;
+    font-weight: 600;
+    padding: 0.55rem 1.8rem;
+    border-radius: 2rem;
+    cursor: pointer;
+    margin-top: 1.2rem;
+    background: linear-gradient(180deg, #A35BFF 0%, #811FFF 100%);
+    transition: background 0.2s ease, opacity 0.2s ease;
+}
+
+.db-bot-btn:hover:not(:disabled) {
+    background: linear-gradient(260deg, #A35BFF 0%, #811FFF 100%);
+}
+
+.db-bot-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 /* ---- Cancel battle button (creator, open state) ---- */
 
 .db-cancel-btn {

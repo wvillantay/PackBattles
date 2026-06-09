@@ -62,8 +62,10 @@ const DuelBattle = () => {
     const [loading,   setLoading]   = useState(true);
     const [error,     setError]     = useState('');
     const [showPopup,    setShowPopup]    = useState(false);
-    const [cancelling,   setCancelling]   = useState(false);
-    const [cancelError,  setCancelError]  = useState('');
+    const [cancelling,    setCancelling]    = useState(false);
+    const [cancelError,   setCancelError]   = useState('');
+    const [isBotBattling, setIsBotBattling] = useState(false);
+    const [botError,      setBotError]      = useState('');
 
     // ── Pack pool for roulette cycling (read-only, fetched once) ─────────────
     const [packPool, setPackPool] = useState([]);
@@ -279,6 +281,30 @@ const DuelBattle = () => {
         }
     };
 
+    // ── Battle Bot (creator only) ─────────────────────────────────────────────
+    const handleBotJoin = async () => {
+        setIsBotBattling(true);
+        setBotError('');
+        try {
+            const res = await axios.post(
+                `${API}/api/battles/${id}/bot-join`,
+                {},
+                { headers: { Authorization: `Bearer ${token}` } },
+            );
+            if (pollingRef.current) {
+                clearInterval(pollingRef.current);
+                pollingRef.current = null;
+            }
+            setBattle(res.data);
+        } catch (err) {
+            setIsBotBattling(false);
+            // 400 means race (human joined or cancelled) — polling will update UI naturally
+            if (err.response?.status !== 400) {
+                setBotError('Bot join failed. Please try again.');
+            }
+        }
+    };
+
     // ── Loading / error early returns ─────────────────────────────────────────
     if (loading) {
         return (
@@ -316,8 +342,8 @@ const DuelBattle = () => {
     const isOpponent   = user?.id === battle.opponent_id;
     const isSpectator  = !isCreator && !isOpponent;
     const isRevealing  = isCompleted && !revealDone;
-    const creatorWins  = revealDone && battle.winner_id === battle.creator_id;
-    const opponentWins = revealDone && battle.winner_id === battle.opponent_id;
+    const creatorWins  = revealDone && battle.winner_side === 'creator';
+    const opponentWins = revealDone && (battle.winner_side === 'opponent' || battle.winner_side === 'bot');
     const winner       = revealDone ? (creatorWins ? battle.creator_name : battle.opponent_name) : null;
     const loser        = revealDone ? (creatorWins ? battle.opponent_name : battle.creator_name) : null;
     const totalAwarded = revealDone
@@ -506,7 +532,7 @@ const DuelBattle = () => {
                                                             <button
                                                                 className="db-cancel-btn"
                                                                 onClick={handleCancel}
-                                                                disabled={cancelling}
+                                                                disabled={cancelling || isBotBattling}
                                                             >
                                                                 {cancelling ? 'Cancelling...' : 'Cancel Battle'}
                                                             </button>
@@ -571,6 +597,20 @@ const DuelBattle = () => {
                                                         <Link to="/battles" className="db-battles-link">battles list</Link>
                                                         {' '}for {battle.total_cost} cr
                                                     </p>
+                                                    {isCreator && (
+                                                        <>
+                                                            {botError && (
+                                                                <p className="db-cancel-error">{botError}</p>
+                                                            )}
+                                                            <button
+                                                                className="db-bot-btn"
+                                                                onClick={handleBotJoin}
+                                                                disabled={isBotBattling || cancelling}
+                                                            >
+                                                                {isBotBattling ? 'Finding bot...' : 'Battle Bot'}
+                                                            </button>
+                                                        </>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>

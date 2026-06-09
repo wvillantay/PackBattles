@@ -302,6 +302,9 @@ def get_inventory():
 # Battle routes  (Duel Battle MVP — pack-based)
 # ---------------------------------------------------------------------------
 
+BOT_NAMES = ["Rookie Bot", "Lucky Bot", "Collector Bot", "High Roller Bot", "Shadow Bot"]
+
+
 def _draw_from_pack(pack):
     """
     Randomly draw cards from a pack's weighted pool.
@@ -478,19 +481,34 @@ def get_battle(battle_id):
     }
 
     if battle["status"] == "completed":
-        opponent = mongo.db.users.find_one({"_id": battle["opponent_id"]}, {"name": 1})
+        is_bot = battle.get("is_bot_battle", False)
+        if is_bot:
+            opponent_name = battle.get("bot_name", "Bot")
+        else:
+            opp_user = mongo.db.users.find_one({"_id": battle["opponent_id"]}, {"name": 1})
+            opponent_name = opp_user["name"] if opp_user else "Unknown"
+
+        w_id = battle.get("winner_id")
+        if is_bot:
+            winner_side = "creator" if w_id else "bot"
+        else:
+            winner_side = "creator" if w_id == battle["creator_id"] else "opponent"
+
         base.update({
             "creator_total":  battle["creator_total"],
             "creator_cards":  [_card_detail(mongo.db.cards.find_one({"_id": cid}))
                                for cid in battle["creator_cards"]],
-            "opponent_id":    str(battle["opponent_id"]),
-            "opponent_name":  opponent["name"] if opponent else "Unknown",
+            "opponent_id":    str(battle["opponent_id"]) if battle.get("opponent_id") else None,
+            "opponent_name":  opponent_name,
             "opponent_total": battle["opponent_total"],
             "opponent_cards": [_card_detail(mongo.db.cards.find_one({"_id": cid}))
                                for cid in battle["opponent_cards"]],
-            "winner_id":      str(battle["winner_id"]),
+            "winner_id":      str(w_id) if w_id else None,
+            "winner_side":    winner_side,
             "tiebreaker":     battle.get("tiebreaker"),
             "completed_at":   battle["completed_at"].isoformat(),
+            "bot_battle":     is_bot,
+            "bot_name":       battle.get("bot_name"),
         })
 
     return jsonify(base)
@@ -622,8 +640,137 @@ def join_battle(battle_id):
         "opponent_total": opponent_total,
         "opponent_cards": opponent_card_details,
         "winner_id":      str(winner_id),
+        "winner_side":    "creator" if winner_id == battle["creator_id"] else "opponent",
         "tiebreaker":     tiebreaker,
         "completed_at":   now.isoformat(),
+        "bot_battle":     False,
+        "bot_name":       None,
+    })
+
+
+# ---------------------------------------------------------------------------
+# Bot-join battle
+# ---------------------------------------------------------------------------
+
+@app.route("/api/battles/<battle_id>/bot-join", methods=["POST"])
+@require_auth
+def bot_join_battle(battle_id):
+    """
+    Resolve an open battle against a bot (creator only).
+    Bot draws using the exact same _draw_from_pack logic as a real opponent.
+    No credits deducted from anyone. No bot inventory.
+    Race-safe: atomic status update means only the first valid action
+    (human join, cancel, or bot-join) claims the open battle.
+    """
+    try:
+        bid = ObjectId(battle_id)
+    except Exception:
+        return jsonify({"error": "Invalid battle id"}), 400
+
+    battle = mongo.db.battles.find_one({"_id": bid})
+    if not battle:
+        return jsonify({"error": "Battle not found"}), 404
+    if str(battle["creator_id"]) != g.user_id:
+        return jsonify({"error": "Only the creator can trigger a bot battle"}), 403
+    if battle["status"] != "open":
+        return jsonify({"error": "Only open battles can be bot-joined"}), 400
+
+    pack = mongo.db.packs.find_one({"_id": battle["pack_id"]})
+    if not pack:
+        return jsonify({"error": "Pack no longer exists"}), 404
+
+    pack_quantity = battle.get("pack_quantity", 1)
+    bot_name      = random.choice(BOT_NAMES)
+
+    # Draw packs for the bot — identical to join_battle, no credit deduction
+    bot_drawn_ids  = []
+    bot_drawn_docs = []
+    bot_total      = 0.0
+    for _ in range(pack_quantity):
+        ids, docs, subtotal = _draw_from_pack(pack)
+        bot_drawn_ids.extend(ids)
+        bot_drawn_docs.extend(docs)
+        bot_total += subtotal
+
+    creator_total = battle["creator_total"]
+    creator_oid   = battle["creator_id"]
+    now           = datetime.now(timezone.utc)
+    tiebreaker    = None
+
+    if creator_total > bot_total:
+        creator_wins = True
+    elif bot_total > creator_total:
+        creator_wins = False
+    else:
+        flip         = random.choice(["creator", "bot"])
+        tiebreaker   = flip
+        creator_wins = (flip == "creator")
+
+    winner_id   = creator_oid if creator_wins else None
+    winner_side = "creator"   if creator_wins else "bot"
+    all_cards   = battle["creator_cards"] + bot_drawn_ids
+
+    # Atomic claim — if a human joined or cancel ran first, matched_count == 0
+    result = mongo.db.battles.update_one(
+        {"_id": bid, "status": "open", "creator_id": creator_oid},
+        {"$set": {
+            "status":         "completed",
+            "is_bot_battle":  True,
+            "bot_name":       bot_name,
+            "opponent_id":    None,
+            "opponent_cards": bot_drawn_ids,
+            "opponent_total": bot_total,
+            "winner_id":      winner_id,
+            "tiebreaker":     tiebreaker,
+            "completed_at":   now,
+        }},
+    )
+    if result.matched_count == 0:
+        return jsonify({"error": "Battle could not be resolved — it may have already been joined or cancelled"}), 400
+
+    if creator_wins:
+        for cid in all_cards:
+            mongo.db.inventory.update_one(
+                {"user_id": creator_oid, "card_id": cid},
+                {
+                    "$inc":         {"quantity": 1},
+                    "$setOnInsert": {"acquired_at": now},
+                },
+                upsert=True,
+            )
+        mongo.db.users.update_one({"_id": creator_oid}, {"$inc": {"wins": 1}})
+    else:
+        mongo.db.users.update_one({"_id": creator_oid}, {"$inc": {"losses": 1}})
+
+    creator             = mongo.db.users.find_one({"_id": creator_oid}, {"name": 1})
+    creator_card_details = [
+        _card_detail(mongo.db.cards.find_one({"_id": cid}))
+        for cid in battle["creator_cards"]
+    ]
+    bot_card_details = [_card_detail(d) for d in bot_drawn_docs if d]
+
+    return jsonify({
+        "id":             str(bid),
+        "status":         "completed",
+        "pack_id":        str(battle["pack_id"]),
+        "pack_name":      pack["name"],
+        "pack_cost":      pack["cost"],
+        "pack_quantity":  pack_quantity,
+        "total_cost":     pack["cost"] * pack_quantity,
+        "creator_id":     str(creator_oid),
+        "creator_name":   creator["name"] if creator else "Unknown",
+        "creator_total":  creator_total,
+        "creator_cards":  creator_card_details,
+        "opponent_id":    None,
+        "opponent_name":  bot_name,
+        "opponent_total": bot_total,
+        "opponent_cards": bot_card_details,
+        "winner_id":      str(winner_id) if winner_id else None,
+        "winner_side":    winner_side,
+        "tiebreaker":     tiebreaker,
+        "completed_at":   now.isoformat(),
+        "bot_battle":     True,
+        "bot_name":       bot_name,
     })
 
 
