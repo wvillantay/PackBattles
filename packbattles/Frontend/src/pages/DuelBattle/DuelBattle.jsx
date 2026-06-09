@@ -292,6 +292,8 @@ const DuelBattle = () => {
     // ── Derived values ────────────────────────────────────────────────────────
     const isCompleted  = battle.status === 'completed';
     const isCreator    = user?.id === battle.creator_id;
+    const isOpponent   = user?.id === battle.opponent_id;
+    const isSpectator  = !isCreator && !isOpponent;
     const isRevealing  = isCompleted && !revealDone;
     const creatorWins  = revealDone && battle.winner_id === battle.creator_id;
     const opponentWins = revealDone && battle.winner_id === battle.opponent_id;

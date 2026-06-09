@@ -188,6 +188,9 @@ const Battles = () => {
                                                     ) : (
                                                         <span className="bt-own-label">Your battle</span>
                                                     )}
+                                                    <button onClick={() => navigate(`/duel-battle/${battle.id}`)}>
+                                                        Watch
+                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>
