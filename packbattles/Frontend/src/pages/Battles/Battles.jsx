@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { IoMdSearch } from 'react-icons/io';
 import StartNow from '../../components/StartNow/StartNow';
@@ -7,17 +8,11 @@ import './Battles.css';
 
 const API = 'http://localhost:8080';
 
-const RARITY_COLOR = {
-    common:     '#9ca3af',
-    uncommon:   '#60a5fa',
-    rare:       '#a35bff',
-    ultra_rare: '#f59e0b',
-};
-
 const QTY_OPTIONS = [1, 2, 3, 5, 10];
 
 const Battles = () => {
     const { token, user, updateUser } = useAuth();
+    const navigate = useNavigate();
 
     const [battles, setBattles]               = useState([]);
     const [battlesLoading, setBattlesLoading] = useState(true);
@@ -37,9 +32,6 @@ const Battles = () => {
     const [joiningBattle, setJoiningBattle] = useState(null);
     const [joining, setJoining]             = useState(false);
     const [joinError, setJoinError]         = useState('');
-
-    // Result overlay
-    const [result, setResult] = useState(null);
 
     const fetchBattles = () => {
         setBattlesLoading(true);
@@ -84,10 +76,9 @@ const Battles = () => {
                 { pack_id: selectedPack.id, pack_quantity: selectedQty },
                 { headers: { Authorization: `Bearer ${token}` } },
             )
-            .then(() => {
+            .then(res => {
                 updateUser({ credits: Number(user.credits) - totalCost });
-                setShowCreate(false);
-                fetchBattles();
+                navigate('/duel-battle/' + res.data.id);
             })
             .catch(err => setCreateError(err.response?.data?.error || 'Failed to create battle.'))
             .finally(() => setCreating(false));
@@ -103,11 +94,9 @@ const Battles = () => {
                 {},
                 { headers: { Authorization: `Bearer ${token}` } },
             )
-            .then(res => {
+            .then(() => {
                 updateUser({ credits: Number(user.credits) - Number(joiningBattle.total_cost) });
-                setJoiningBattle(null);
-                setResult(res.data);
-                fetchBattles();
+                navigate('/duel-battle/' + joiningBattle.id);
             })
             .catch(err => setJoinError(err.response?.data?.error || 'Failed to join battle.'))
             .finally(() => setJoining(false));
@@ -369,100 +358,6 @@ const Battles = () => {
                                 disabled={!canAffordJoin || joining}
                             >
                                 {joining ? 'Joining...' : `Join for ${joiningBattle.total_cost} cr`}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* BATTLE RESULT OVERLAY — sticky close bar so it's always reachable */}
-            {result && (
-                <div className="bt-result-overlay">
-                    <div className="bt-result-inner">
-                        <div className="bt-result-scroll">
-                            <h2 className={result.winner_id === user?.id ? 'bt-result-win' : 'bt-result-lose'}>
-                                {result.winner_id === user?.id ? 'You Won!' : 'You Lost'}
-                            </h2>
-
-                            <p className="bt-result-pack-name">
-                                {result.pack_name}
-                                {result.pack_quantity > 1 && ` ×${result.pack_quantity}`} Battle
-                                {' '}— {result.total_cost} cr total
-                            </p>
-
-                            {result.tiebreaker && (
-                                <p className="bt-result-tiebreaker">
-                                    It was a tie &mdash; coin flip awarded victory to{' '}
-                                    {result.tiebreaker === 'creator'
-                                        ? result.creator_name
-                                        : result.opponent_name}
-                                </p>
-                            )}
-
-                            <div className="bt-result-reveals">
-                                {/* Creator's draw */}
-                                <div className="bt-result-side">
-                                    <div className="bt-result-side-header">
-                                        <p className="bt-result-player-name">
-                                            {result.creator_name}
-                                            {result.winner_id === result.creator_id && (
-                                                <span className="bt-result-crown"> Winner</span>
-                                            )}
-                                        </p>
-                                        <p className="bt-result-side-total">{result.creator_total} cr</p>
-                                    </div>
-                                    <div className="bt-result-card-list">
-                                        {result.creator_cards.map((card, i) => (
-                                            <div key={`c-${i}`} className="bt-result-card">
-                                                <img src={card.image_url} alt={card.name} />
-                                                <span
-                                                    className="bt-result-card-rarity"
-                                                    style={{ background: RARITY_COLOR[card.rarity] || '#9ca3af' }}
-                                                >
-                                                    {card.rarity.replace('_', ' ').toUpperCase()}
-                                                </span>
-                                                <p>{card.name}</p>
-                                                <span className="bt-result-card-value">{card.value} cr</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="bt-result-vs-divider">VS</div>
-
-                                {/* Opponent's draw */}
-                                <div className="bt-result-side">
-                                    <div className="bt-result-side-header">
-                                        <p className="bt-result-player-name">
-                                            {result.opponent_name}
-                                            {result.winner_id === result.opponent_id && (
-                                                <span className="bt-result-crown"> Winner</span>
-                                            )}
-                                        </p>
-                                        <p className="bt-result-side-total">{result.opponent_total} cr</p>
-                                    </div>
-                                    <div className="bt-result-card-list">
-                                        {result.opponent_cards.map((card, i) => (
-                                            <div key={`o-${i}`} className="bt-result-card">
-                                                <img src={card.image_url} alt={card.name} />
-                                                <span
-                                                    className="bt-result-card-rarity"
-                                                    style={{ background: RARITY_COLOR[card.rarity] || '#9ca3af' }}
-                                                >
-                                                    {card.rarity.replace('_', ' ').toUpperCase()}
-                                                </span>
-                                                <p>{card.name}</p>
-                                                <span className="bt-result-card-value">{card.value} cr</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="bt-result-close-bar">
-                            <button className="bt-btn-primary" onClick={() => setResult(null)}>
-                                Close
                             </button>
                         </div>
                     </div>

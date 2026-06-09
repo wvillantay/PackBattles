@@ -461,7 +461,8 @@ def get_battle(battle_id):
 
     pack = mongo.db.packs.find_one({"_id": battle["pack_id"]}, {"name": 1, "cost": 1})
 
-    qty = battle.get("pack_quantity", 1)
+    qty     = battle.get("pack_quantity", 1)
+    creator = mongo.db.users.find_one({"_id": battle["creator_id"]}, {"name": 1})
     base = {
         "id":            str(battle["_id"]),
         "type":          battle["type"],
@@ -472,14 +473,13 @@ def get_battle(battle_id):
         "pack_quantity": qty,
         "total_cost":    (pack["cost"] if pack else 0) * qty,
         "creator_id":    str(battle["creator_id"]),
+        "creator_name":  creator["name"] if creator else "Unknown",
         "created_at":    battle["created_at"].isoformat(),
     }
 
     if battle["status"] == "completed":
-        creator  = mongo.db.users.find_one({"_id": battle["creator_id"]}, {"name": 1})
         opponent = mongo.db.users.find_one({"_id": battle["opponent_id"]}, {"name": 1})
         base.update({
-            "creator_name":   creator["name"]  if creator  else "Unknown",
             "creator_total":  battle["creator_total"],
             "creator_cards":  [_card_detail(mongo.db.cards.find_one({"_id": cid}))
                                for cid in battle["creator_cards"]],
