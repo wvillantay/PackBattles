@@ -628,6 +628,62 @@ def join_battle(battle_id):
 
 
 # ---------------------------------------------------------------------------
+# Cancel battle
+# ---------------------------------------------------------------------------
+
+@app.route("/api/battles/<battle_id>/cancel", methods=["POST"])
+@require_auth
+def cancel_battle(battle_id):
+    """
+    Cancel an open Duel Battle (creator only).
+    Uses a MongoDB transaction: battle status and credit refund are committed
+    atomically — either both succeed or neither persists.
+    """
+    try:
+        bid = ObjectId(battle_id)
+    except Exception:
+        return jsonify({"error": "Invalid battle id"}), 400
+
+    battle = mongo.db.battles.find_one({"_id": bid})
+    if not battle:
+        return jsonify({"error": "Battle not found"}), 404
+    if str(battle["creator_id"]) != g.user_id:
+        return jsonify({"error": "Only the creator can cancel this battle"}), 403
+    if battle["status"] != "open":
+        return jsonify({"error": "Only open battles can be cancelled"}), 400
+
+    total_cost  = battle["pack_cost"] * battle.get("pack_quantity", 1)
+    creator_oid = battle["creator_id"]
+    now         = datetime.now(timezone.utc)
+
+    # blocked = True means the battle was already claimed by a concurrent join;
+    # any other exception is a genuine DB error.
+    blocked = False
+    try:
+        with mongo.cx.start_session() as session:
+            with session.start_transaction():
+                result = mongo.db.battles.update_one(
+                    {"_id": bid, "status": "open", "creator_id": creator_oid},
+                    {"$set": {"status": "cancelled", "cancelled_at": now}},
+                    session=session,
+                )
+                if result.matched_count == 0:
+                    blocked = True
+                    raise RuntimeError("blocked")
+                mongo.db.users.update_one(
+                    {"_id": creator_oid},
+                    {"$inc": {"credits": total_cost}},
+                    session=session,
+                )
+    except Exception:
+        if blocked:
+            return jsonify({"error": "Battle could not be cancelled — it may have just been joined"}), 400
+        return jsonify({"error": "Cancel failed; please try again"}), 500
+
+    return jsonify({"status": "cancelled", "credits_refunded": total_cost})
+
+
+# ---------------------------------------------------------------------------
 # Health check
 # ---------------------------------------------------------------------------
 

@@ -54,14 +54,16 @@ function getTimingConfig(n) {
 
 const DuelBattle = () => {
     const { id }          = useParams();
-    const { token, user } = useAuth();
+    const { token, user, updateUser } = useAuth();
     const navigate        = useNavigate();
 
     // ── Fetch / poll state ────────────────────────────────────────────────────
     const [battle,    setBattle]    = useState(null);
     const [loading,   setLoading]   = useState(true);
     const [error,     setError]     = useState('');
-    const [showPopup, setShowPopup] = useState(false);
+    const [showPopup,    setShowPopup]    = useState(false);
+    const [cancelling,   setCancelling]   = useState(false);
+    const [cancelError,  setCancelError]  = useState('');
 
     // ── Pack pool for roulette cycling (read-only, fetched once) ─────────────
     const [packPool, setPackPool] = useState([]);
@@ -120,7 +122,7 @@ const DuelBattle = () => {
                         fetchBattle()
                             .then(r => {
                                 if (!active) return;
-                                if (r.data.status === 'completed') {
+                                if (r.data.status === 'completed' || r.data.status === 'cancelled') {
                                     clearInterval(pollingRef.current);
                                     pollingRef.current = null;
                                     setBattle(r.data);
@@ -259,6 +261,24 @@ const DuelBattle = () => {
         setRevealDone(true);
     };
 
+    // ── Cancel open battle (creator only) ────────────────────────────────────
+    const handleCancel = async () => {
+        setCancelling(true);
+        setCancelError('');
+        try {
+            await axios.post(
+                `${API}/api/battles/${id}/cancel`,
+                {},
+                { headers: { Authorization: `Bearer ${token}` } },
+            );
+            updateUser({ credits: Number(user.credits) + Number(battle.total_cost) });
+            navigate('/battles');
+        } catch (err) {
+            setCancelError(err.response?.data?.error || 'Cancel failed. Please try again.');
+            setCancelling(false);
+        }
+    };
+
     // ── Loading / error early returns ─────────────────────────────────────────
     if (loading) {
         return (
@@ -291,6 +311,7 @@ const DuelBattle = () => {
 
     // ── Derived values ────────────────────────────────────────────────────────
     const isCompleted  = battle.status === 'completed';
+    const isCancelled  = battle.status === 'cancelled';
     const isCreator    = user?.id === battle.creator_id;
     const isOpponent   = user?.id === battle.opponent_id;
     const isSpectator  = !isCreator && !isOpponent;
@@ -311,6 +332,27 @@ const DuelBattle = () => {
     const runningOpponentTotal = isCompleted
         ? battle.opponent_cards.slice(0, committedCount).reduce((s, c) => s + Number(c.value), 0).toFixed(2)
         : '0.00';
+
+    // ── Cancelled state ───────────────────────────────────────────────────────
+    if (isCancelled) {
+        return (
+            <section className="duel-battle">
+                <div className="packs-bg">
+                    <img className="bar-img" src="./imgs/Rectangle 15.png" alt="" />
+                    <img className="bg-img"  src="./imgs/image 3.png"      alt="" />
+                </div>
+                <div className="container">
+                    <p className="db-status-text db-status-waiting">Battle Cancelled</p>
+                    <p className="db-cancelled-hint">
+                        {isCreator
+                            ? 'Your battle was cancelled and your credits have been refunded.'
+                            : 'The creator cancelled this battle before anyone joined.'}
+                    </p>
+                    <Link to="/battles" className="db-back-link">Back to Battles</Link>
+                </div>
+            </section>
+        );
+    }
 
     // ── Card grid renderer ────────────────────────────────────────────────────
     // Three slot states per card position i:
@@ -456,6 +498,20 @@ const DuelBattle = () => {
                                                     <p className="db-sealed-pack">
                                                         {battle.pack_name} ×{battle.pack_quantity}
                                                     </p>
+                                                    {isCreator && (
+                                                        <>
+                                                            {cancelError && (
+                                                                <p className="db-cancel-error">{cancelError}</p>
+                                                            )}
+                                                            <button
+                                                                className="db-cancel-btn"
+                                                                onClick={handleCancel}
+                                                                disabled={cancelling}
+                                                            >
+                                                                {cancelling ? 'Cancelling...' : 'Cancel Battle'}
+                                                            </button>
+                                                        </>
+                                                    )}
                                                 </div>
                                             ) : (
                                                 <>
