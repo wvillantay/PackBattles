@@ -938,6 +938,35 @@ def my_battles():
     return jsonify(result)
 
 
+@app.route("/api/me/transactions", methods=["GET"])
+@require_auth
+def my_transactions():
+    uid = ObjectId(g.user_id)
+    raw = list(
+        mongo.db.credit_transactions.find(
+            {"user_id": uid},
+            {"user_id": 0},
+        )
+        .sort("created_at", -1)
+        .limit(50)
+    )
+
+    result = []
+    for tx in raw:
+        result.append({
+            "id":            str(tx["_id"]),
+            "type":          tx.get("type", ""),
+            "note":          tx.get("note", ""),
+            "amount":        tx.get("amount"),
+            "balance_after": tx.get("balance_after"),
+            "ref_type":      tx.get("ref_type", ""),
+            "ref_id":        str(tx["ref_id"]) if tx.get("ref_id") else None,
+            "created_at":    tx["created_at"].isoformat() if tx.get("created_at") else None,
+        })
+
+    return jsonify(result)
+
+
 # ---------------------------------------------------------------------------
 # Health check
 # ---------------------------------------------------------------------------
