@@ -12,6 +12,7 @@ const Packs = () => {
     const [packs, setPacks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [sortBy, setSortBy] = useState('ascending');
 
     useEffect(() => {
         axios
@@ -43,7 +44,7 @@ const Packs = () => {
                             </div>
                             <div className="sort" data-aos="fade-right">
                                 <label>Sort By</label>
-                                <select>
+                                <select value={sortBy} onChange={e => setSortBy(e.target.value)}>
                                     <option value="popularity">Popularity</option>
                                     <option value="ascending">Ascending</option>
                                     <option value="descending">Descending</option>
@@ -65,7 +66,13 @@ const Packs = () => {
                     )}
 
                     <div className="row pack-cards">
-                        {packs.map((pack, index) => (
+                        {[...packs]
+                            .sort((a, b) => {
+                                if (sortBy === 'ascending')  return Number(a.cost) - Number(b.cost);
+                                if (sortBy === 'descending') return Number(b.cost) - Number(a.cost);
+                                return 0;
+                            })
+                            .map((pack, index) => (
                             <div className="col-lg-3 col-md-6" data-aos="fade-up" key={pack.id}>
                                 <PackCard
                                     text={pack.name}
