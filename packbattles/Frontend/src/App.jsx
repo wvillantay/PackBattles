@@ -21,6 +21,7 @@ import Upgrade from './pages/Upgrade/Upgrade'
 import Trade from './pages/Trade/Trade'
 import Battles from './pages/Battles/Battles'
 import DuelBattle from './pages/DuelBattle/DuelBattle'
+import Profile from './pages/Profile/Profile'
 import BattlePopup from './pages/BattlePopup/BattlePopup'
 import HighBall from './pages/HighBall/HighBall'
 import DiceRoll from './pages/DiceRoll/DiceRoll'
@@ -54,6 +55,7 @@ const App = () => {
         <Route path="/inventory"           element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
         <Route path="/battles"             element={<ProtectedRoute><Battles /></ProtectedRoute>} />
         <Route path="/duel-battle/:id"    element={<ProtectedRoute><DuelBattle /></ProtectedRoute>} />
+        <Route path="/profile"            element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 
         {/* Static mockup pages — not yet wired, left unprotected for now */}
         <Route path="/events"                          element={<Events />} />

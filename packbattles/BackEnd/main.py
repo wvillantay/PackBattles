@@ -831,6 +831,79 @@ def cancel_battle(battle_id):
 
 
 # ---------------------------------------------------------------------------
+# User battle history
+# ---------------------------------------------------------------------------
+
+@app.route("/api/me/battles", methods=["GET"])
+@require_auth
+def my_battles():
+    uid = ObjectId(g.user_id)
+    raw = list(
+        mongo.db.battles.find(
+            {
+                "status": {"$in": ["completed", "cancelled"]},
+                "$or":    [{"creator_id": uid}, {"opponent_id": uid}],
+            }
+        )
+        .sort("created_at", -1)
+        .limit(20)
+    )
+
+    result = []
+    for b in raw:
+        pack       = mongo.db.packs.find_one({"_id": b["pack_id"]}, {"name": 1, "cost": 1})
+        pack_name  = pack["name"] if pack else "Unknown"
+        qty        = b.get("pack_quantity", 1)
+        total_cost = b.get("pack_cost", 0) * qty
+        status     = b["status"]
+        is_creator = b["creator_id"] == uid
+        is_bot     = b.get("is_bot_battle", False)
+
+        if status == "cancelled":
+            result_label  = "cancelled"
+            opponent_name = None
+            my_total      = None
+            their_total   = None
+        else:
+            if is_bot:
+                opponent_name = b.get("bot_name", "Bot")
+            elif is_creator:
+                opp = mongo.db.users.find_one({"_id": b["opponent_id"]}, {"name": 1}) \
+                      if b.get("opponent_id") else None
+                opponent_name = opp["name"] if opp else "Unknown"
+            else:
+                creator = mongo.db.users.find_one({"_id": b["creator_id"]}, {"name": 1})
+                opponent_name = creator["name"] if creator else "Unknown"
+
+            winner_id    = b.get("winner_id")
+            result_label = "win" if (winner_id and str(winner_id) == g.user_id) else "loss"
+
+            if is_creator:
+                my_total    = b.get("creator_total")
+                their_total = b.get("opponent_total")
+            else:
+                my_total    = b.get("opponent_total")
+                their_total = b.get("creator_total")
+
+        result.append({
+            "id":            str(b["_id"]),
+            "status":        status,
+            "pack_name":     pack_name,
+            "pack_quantity": qty,
+            "total_cost":    total_cost,
+            "opponent_name": opponent_name,
+            "result":        result_label,
+            "my_total":      my_total,
+            "their_total":   their_total,
+            "is_bot_battle": is_bot,
+            "completed_at":  b["completed_at"].isoformat() if b.get("completed_at") else None,
+            "cancelled_at":  b["cancelled_at"].isoformat() if b.get("cancelled_at") else None,
+        })
+
+    return jsonify(result)
+
+
+# ---------------------------------------------------------------------------
 # Health check
 # ---------------------------------------------------------------------------
 

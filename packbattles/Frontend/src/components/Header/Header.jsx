@@ -58,9 +58,9 @@ const Header = () => {
                         <div className="header-buttons ms-auto d-flex align-items-center">
                             {user ? (
                                 <>
-                                    <span className='me-3' style={{ fontSize: '1.4rem', color: '#fff' }}>
+                                    <Link to="/profile" className='me-3 pf-user-link'>
                                         {user.name} &nbsp;·&nbsp; {user.credits} credits
-                                    </span>
+                                    </Link>
                                     <button
                                         className='signup-btn'
                                         onClick={handleLogout}
