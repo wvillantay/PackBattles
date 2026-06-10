@@ -73,6 +73,18 @@
     color: #fff !important;
 }
 
+.admin-nav-link {
+    background: rgba(163, 91, 255, 0.18) !important;
+    border: 1px solid rgba(163, 91, 255, 0.38) !important;
+    color: #A35BFF !important;
+    box-shadow: none !important;
+}
+
+.admin-nav-link:hover {
+    background: linear-gradient(180deg, #A35BFF 0%, #811FFF 100%) !important;
+    color: #fff !important;
+}
+
 @media screen and (max-width: 991px) {
     
     #topNav{

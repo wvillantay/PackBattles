@@ -7,6 +7,7 @@ import "bootstrap/dist/css/bootstrap.min.css"
 
 import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute/ProtectedRoute'
+import AdminRoute from './components/AdminRoute/AdminRoute'
 
 import Header from './components/Header/Header'
 import Footer from './components/Footer/Footer'
@@ -34,6 +35,10 @@ import KingOfTheHillNextRound from './pages/KingOfTheHillNextRound/KingOfTheHill
 import KingOfTheHillTournamentOver from './pages/KingOfTheHillTournamentOver/KingOfTheHillTournamentOver'
 import Login from './pages/Login/Login'
 import SignUp from './pages/SignUp/SignUp'
+import AdminDashboard from './pages/Admin/AdminDashboard'
+import AdminUsers from './pages/Admin/AdminUsers'
+import AdminBattles from './pages/Admin/AdminBattles'
+import AdminTransactions from './pages/Admin/AdminTransactions'
 
 const App = () => {
   useEffect(() => {
@@ -56,6 +61,12 @@ const App = () => {
         <Route path="/battles"             element={<ProtectedRoute><Battles /></ProtectedRoute>} />
         <Route path="/duel-battle/:id"    element={<ProtectedRoute><DuelBattle /></ProtectedRoute>} />
         <Route path="/profile"            element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+
+        {/* Admin routes — require login + is_admin */}
+        <Route path="/admin"              element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+        <Route path="/admin/users"        element={<AdminRoute><AdminUsers /></AdminRoute>} />
+        <Route path="/admin/battles"      element={<AdminRoute><AdminBattles /></AdminRoute>} />
+        <Route path="/admin/transactions" element={<AdminRoute><AdminTransactions /></AdminRoute>} />
 
         {/* Static mockup pages — not yet wired, left unprotected for now */}
         <Route path="/events"                          element={<Events />} />

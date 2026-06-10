@@ -1,0 +1,377 @@
+/* ---- Page wrapper ---- */
+
+.admin-page {
+    position: relative;
+    padding: 6rem 0 8rem;
+    isolation: isolate;
+}
+
+.admin-page .packs-bg {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    height: 50%;
+    z-index: -1;
+}
+
+.admin-page .packs-bg::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(rgba(8, 6, 32, 0.5), rgba(8, 6, 32, 0.5));
+}
+
+.admin-page .bg-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.admin-page .packs-bg .bar-img {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    background: linear-gradient(transparent, rgb(8, 6, 32) 90%);
+}
+
+/* ---- Header row ---- */
+
+.admin-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 3rem;
+}
+
+.admin-header h2 {
+    font-size: 3.2rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+}
+
+.admin-subtitle {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 1.4rem;
+    margin: 0.4rem 0 0;
+}
+
+.admin-back {
+    color: #A35BFF;
+    font-size: 1.4rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.admin-back:hover {
+    color: #fff;
+}
+
+/* ---- Dashboard cards ---- */
+
+.admin-cards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.admin-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    padding: 2.8rem 3rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 1.6rem;
+    background: rgba(33, 0, 75, 0.18);
+    backdrop-filter: blur(10px);
+    text-decoration: none;
+    flex: 1;
+    min-width: 200px;
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.admin-card:hover {
+    border-color: rgba(163, 91, 255, 0.5);
+    background: rgba(33, 0, 75, 0.35);
+}
+
+.admin-card h3 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+}
+
+.admin-card p {
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 1.4rem;
+    margin: 0;
+    flex: 1;
+}
+
+.admin-card-cta {
+    color: #A35BFF;
+    font-size: 1.4rem;
+    font-weight: 600;
+}
+
+/* ---- Filters row ---- */
+
+.admin-filters {
+    display: flex;
+    gap: 1.2rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.admin-search {
+    appearance: none;
+    background: rgba(33, 0, 75, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 1rem;
+    color: #fff;
+    font-size: 1.4rem;
+    font-family: inherit;
+    padding: 0.8rem 1.4rem;
+    outline: none;
+    min-width: 260px;
+}
+
+.admin-search::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.admin-search:focus {
+    border-color: rgba(163, 91, 255, 0.5);
+}
+
+.admin-select {
+    appearance: none;
+    background: rgba(33, 0, 75, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 1rem;
+    color: #fff;
+    font-size: 1.4rem;
+    font-family: inherit;
+    padding: 0.8rem 1.4rem;
+    outline: none;
+    cursor: pointer;
+}
+
+.admin-select:focus {
+    border-color: rgba(163, 91, 255, 0.5);
+}
+
+.admin-select option {
+    background: #21004B;
+    color: #fff;
+}
+
+/* ---- Status / feedback text ---- */
+
+.admin-loading,
+.admin-empty {
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 1.5rem;
+    text-align: center;
+    margin: 3rem 0;
+}
+
+.admin-error {
+    color: #f87171;
+    font-size: 1.4rem;
+    text-align: center;
+    margin: 2rem 0;
+}
+
+/* ---- Table ---- */
+
+.admin-table-wrap {
+    border-radius: 1.6rem;
+    overflow: hidden;
+}
+
+.admin-table {
+    border-collapse: separate;
+    border-spacing: 0 10px;
+    margin: 0;
+}
+
+.admin-table thead th {
+    color: rgba(117, 114, 148, 0.55);
+    font-size: 1.2rem;
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: none;
+    background: transparent !important;
+    padding: 0 1rem 0.6rem;
+}
+
+.admin-table tbody tr {
+    position: relative;
+    isolation: isolate;
+}
+
+.admin-table tbody tr td {
+    background: transparent !important;
+    border: none;
+    padding: 1.1rem 1rem;
+    vertical-align: middle;
+}
+
+.admin-table tbody tr::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(33, 0, 75, 0.1);
+    border-radius: 1.2rem;
+    backdrop-filter: blur(8px);
+    z-index: -1;
+}
+
+.admin-table tbody td p {
+    color: #757294;
+    font-size: 1.4rem;
+    font-weight: 400;
+    margin: 0;
+    white-space: nowrap;
+}
+
+/* ---- User table extras ---- */
+
+.admin-badge {
+    display: inline-block;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 0.4rem;
+    padding: 0.05rem 0.5rem;
+    margin-left: 0.6rem;
+    vertical-align: middle;
+}
+
+.admin-credits { color: #A35BFF !important; font-weight: 600 !important; }
+.admin-wins    { color: #4ade80 !important; font-weight: 600 !important; }
+.admin-losses  { color: #f87171 !important; font-weight: 600 !important; }
+
+/* ---- Battle status badges ---- */
+
+.admin-status-badge {
+    display: inline-block;
+    font-size: 1.1rem;
+    font-weight: 600;
+    padding: 0.25rem 0.9rem;
+    border-radius: 2rem;
+    letter-spacing: 0.04em;
+}
+
+.admin-status-completed {
+    background: rgba(74, 222, 128, 0.12);
+    color: #4ade80;
+    border: 1px solid rgba(74, 222, 128, 0.25);
+}
+
+.admin-status-cancelled {
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.38);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.admin-status-open {
+    background: rgba(96, 165, 250, 0.12);
+    color: #60a5fa;
+    border: 1px solid rgba(96, 165, 250, 0.25);
+}
+
+/* ---- Battle type badges ---- */
+
+.admin-type-badge {
+    display: inline-block;
+    font-size: 1.1rem;
+    font-weight: 700;
+    padding: 0.25rem 0.9rem;
+    border-radius: 2rem;
+    letter-spacing: 0.04em;
+}
+
+.admin-type-bot {
+    background: rgba(163, 91, 255, 0.12);
+    color: #A35BFF;
+    border: 1px solid rgba(163, 91, 255, 0.25);
+}
+
+.admin-type-human {
+    background: rgba(245, 158, 11, 0.12);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.admin-qty {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 1.2rem;
+    margin-left: 0.2rem;
+}
+
+/* ---- Transaction extras ---- */
+
+.admin-tx-type {
+    font-size: 1.25rem !important;
+    font-weight: 600 !important;
+    color: #A35BFF !important;
+    white-space: nowrap;
+}
+
+.admin-tx-note {
+    white-space: normal !important;
+    max-width: 200px;
+    word-break: break-word;
+}
+
+.admin-tx-pos {
+    color: #4ade80 !important;
+    font-weight: 600 !important;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.admin-tx-neg {
+    color: #f87171 !important;
+    font-weight: 600 !important;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.admin-tx-balance {
+    color: rgba(255, 255, 255, 0.45) !important;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+/* ---- Mobile ---- */
+
+@media (max-width: 767px) {
+    .admin-header h2 {
+        font-size: 2.4rem;
+    }
+
+    .admin-cards {
+        flex-direction: column;
+    }
+
+    .admin-table thead th,
+    .admin-table tbody td p {
+        font-size: 1.2rem;
+    }
+}

@@ -158,10 +158,11 @@ def login():
     return jsonify({
         "token": token,
         "user": {
-            "id":      str(user["_id"]),
-            "name":    user["name"],
-            "email":   user["email"],
-            "credits": user["credits"],
+            "id":       str(user["_id"]),
+            "name":     user["name"],
+            "email":    user["email"],
+            "credits":  user["credits"],
+            "is_admin": user.get("is_admin", False) is True,
         },
     })
 
@@ -1015,6 +1016,142 @@ def my_transactions():
 @require_admin
 def admin_ping():
     return jsonify({"ok": True, "message": "admin access confirmed"})
+
+
+@app.route("/api/admin/users", methods=["GET"])
+@require_admin
+def admin_users():
+    raw = list(
+        mongo.db.users.find({}, {"password_hash": 0})
+        .sort("created_at", -1)
+        .limit(50)
+    )
+    result = []
+    for u in raw:
+        result.append({
+            "id":         str(u["_id"]),
+            "name":       u.get("name", ""),
+            "email":      u.get("email", ""),
+            "credits":    u.get("credits", 0),
+            "wins":       u.get("wins", 0),
+            "losses":     u.get("losses", 0),
+            "is_admin":   u.get("is_admin", False) is True,
+            "created_at": u["created_at"].isoformat() if u.get("created_at") else None,
+        })
+    return jsonify(result)
+
+
+@app.route("/api/admin/battles", methods=["GET"])
+@require_admin
+def admin_battles():
+    status_filter = request.args.get("status", "").strip()
+    type_filter   = request.args.get("type",   "").strip()
+
+    query = {}
+    if status_filter in ("open", "completed", "cancelled"):
+        query["status"] = status_filter
+    if type_filter == "bot":
+        query["is_bot_battle"] = True
+    elif type_filter == "human":
+        query["is_bot_battle"] = {"$ne": True}
+
+    raw = list(
+        mongo.db.battles.find(query)
+        .sort("created_at", -1)
+        .limit(50)
+    )
+
+    # Batch-fetch packs and users to avoid N+1 queries
+    pack_ids     = list({b["pack_id"]    for b in raw if b.get("pack_id")})
+    creator_ids  = list({b["creator_id"] for b in raw if b.get("creator_id")})
+    winner_ids   = list({b["winner_id"]  for b in raw if b.get("winner_id")})
+    all_user_ids = list(set(creator_ids) | set(winner_ids))
+
+    packs_map = {
+        str(p["_id"]): p.get("name", "Unknown Pack")
+        for p in mongo.db.packs.find({"_id": {"$in": pack_ids}}, {"name": 1})
+    }
+    users_map = {
+        str(u["_id"]): u.get("name", "Unknown")
+        for u in mongo.db.users.find({"_id": {"$in": all_user_ids}}, {"name": 1})
+    }
+
+    result = []
+    for b in raw:
+        pack_id    = b.get("pack_id")
+        creator_id = b.get("creator_id")
+        winner_id  = b.get("winner_id")
+        status     = b.get("status", "unknown")
+        is_bot     = b.get("is_bot_battle", False)
+
+        pack_name    = packs_map.get(str(pack_id), "Unknown Pack") if pack_id else "Unknown Pack"
+        creator_name = users_map.get(str(creator_id), "Unknown")   if creator_id else "Unknown"
+
+        if winner_id:
+            winner_name = users_map.get(str(winner_id), "Unknown")
+        elif status == "completed" and is_bot:
+            winner_name = "Bot"
+        else:
+            winner_name = None
+
+        result.append({
+            "id":            str(b["_id"]),
+            "status":        status,
+            "pack_name":     pack_name,
+            "pack_quantity": b.get("pack_quantity", 1),
+            "creator_name":  creator_name,
+            "winner_name":   winner_name,
+            "is_bot_battle": is_bot,
+            "created_at":    b["created_at"].isoformat()    if b.get("created_at")    else None,
+            "completed_at":  b["completed_at"].isoformat()  if b.get("completed_at")  else None,
+            "cancelled_at":  b["cancelled_at"].isoformat()  if b.get("cancelled_at")  else None,
+        })
+
+    return jsonify(result)
+
+
+@app.route("/api/admin/transactions", methods=["GET"])
+@require_admin
+def admin_transactions():
+    type_filter = request.args.get("type", "").strip()
+
+    valid_types = {
+        "pack_open_spend", "battle_create_spend",
+        "battle_join_spend", "battle_cancel_refund",
+    }
+    query = {}
+    if type_filter in valid_types:
+        query["type"] = type_filter
+
+    raw = list(
+        mongo.db.credit_transactions.find(query)
+        .sort("created_at", -1)
+        .limit(50)
+    )
+
+    # Batch-fetch user names
+    user_ids  = list({tx["user_id"] for tx in raw if tx.get("user_id")})
+    users_map = {
+        str(u["_id"]): u.get("name", "Unknown")
+        for u in mongo.db.users.find({"_id": {"$in": user_ids}}, {"name": 1})
+    }
+
+    result = []
+    for tx in raw:
+        uid = tx.get("user_id")
+        result.append({
+            "id":            str(tx["_id"]),
+            "user_name":     users_map.get(str(uid), "Unknown") if uid else "Unknown",
+            "type":          tx.get("type", ""),
+            "note":          tx.get("note", ""),
+            "amount":        tx.get("amount"),
+            "balance_after": tx.get("balance_after"),
+            "ref_type":      tx.get("ref_type", ""),
+            "ref_id":        str(tx["ref_id"]) if tx.get("ref_id") else None,
+            "created_at":    tx["created_at"].isoformat() if tx.get("created_at") else None,
+        })
+
+    return jsonify(result)
 
 
 # ---------------------------------------------------------------------------

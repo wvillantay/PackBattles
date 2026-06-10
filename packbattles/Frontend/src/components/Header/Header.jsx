@@ -61,6 +61,9 @@ const Header = () => {
                                     <Link to="/profile" className='me-3 pf-user-link'>
                                         {user.name} &nbsp;·&nbsp; {user.credits} credits
                                     </Link>
+                                    {user.is_admin && (
+                                        <Link to="/admin" className="me-3 admin-nav-link">Admin</Link>
+                                    )}
                                     <button
                                         className='signup-btn'
                                         onClick={handleLogout}
