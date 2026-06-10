@@ -25,6 +25,7 @@ const Battles = () => {
     const [showCreate, setShowCreate]     = useState(false);
     const [selectedPack, setSelectedPack] = useState(null);
     const [selectedQty, setSelectedQty]   = useState(1);
+    const [packSort, setPackSort]         = useState('price-asc');
     const [creating, setCreating]         = useState(false);
     const [createError, setCreateError]   = useState('');
 
@@ -101,6 +102,14 @@ const Battles = () => {
             .catch(err => setJoinError(err.response?.data?.error || 'Failed to join battle.'))
             .finally(() => setJoining(false));
     };
+
+    const sortedPacks = [...packs].sort((a, b) => {
+        if (packSort === 'price-asc')  return a.cost - b.cost;
+        if (packSort === 'price-desc') return b.cost - a.cost;
+        if (packSort === 'name-asc')   return a.name.localeCompare(b.name);
+        if (packSort === 'name-desc')  return b.name.localeCompare(a.name);
+        return 0;
+    });
 
     const totalCreateCost = selectedPack ? Number(selectedPack.cost) * selectedQty : 0;
     const canAffordCreate = selectedPack && Number(user?.credits) >= totalCreateCost;
@@ -226,8 +235,23 @@ const Battles = () => {
                             <p className="bt-modal-status">No packs available.</p>
                         )}
 
+                        {!packsLoading && packs.length > 0 && (
+                            <div className="bt-sort-row">
+                                <select
+                                    className="bt-sort-select"
+                                    value={packSort}
+                                    onChange={e => setPackSort(e.target.value)}
+                                >
+                                    <option value="price-asc">Price: Low to High</option>
+                                    <option value="price-desc">Price: High to Low</option>
+                                    <option value="name-asc">Name: A to Z</option>
+                                    <option value="name-desc">Name: Z to A</option>
+                                </select>
+                            </div>
+                        )}
+
                         <div className="bt-pack-picker">
-                            {packs.map(pack => (
+                            {sortedPacks.map(pack => (
                                 <div
                                     key={pack.id}
                                     className={`bt-pack-tile${selectedPack?.id === pack.id ? ' selected' : ''}`}
