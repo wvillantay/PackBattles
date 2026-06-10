@@ -63,6 +63,41 @@ def require_auth(f):
     return decorated
 
 
+def require_admin(f):
+    """
+    Decorator that enforces admin access.
+
+    Validates the JWT (401 on failure) and then reads is_admin directly
+    from MongoDB (403 if missing or not True).  Admin status is never
+    inferred from the token alone — always re-confirmed from the database.
+    """
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        # Step 1 — valid JWT
+        header = request.headers.get("Authorization", "")
+        if not header.startswith("Bearer "):
+            return jsonify({"error": "Missing or invalid token"}), 401
+        token = header[7:]
+        try:
+            payload = jwt.decode(token, jwt_secret, algorithms=["HS256"])
+        except jwt.ExpiredSignatureError:
+            return jsonify({"error": "Token expired"}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({"error": "Invalid token"}), 401
+
+        # Step 2 — is_admin confirmed from DB, never from JWT
+        user = mongo.db.users.find_one(
+            {"_id": ObjectId(payload["user_id"])},
+            {"is_admin": 1},
+        )
+        if not user or user.get("is_admin") is not True:
+            return jsonify({"error": "Admin access required"}), 403
+
+        g.user_id = payload["user_id"]
+        return f(*args, **kwargs)
+    return decorated
+
+
 # ---------------------------------------------------------------------------
 # Auth routes
 # ---------------------------------------------------------------------------
@@ -142,12 +177,13 @@ def me():
     if not user:
         return jsonify({"error": "User not found"}), 404
     return jsonify({
-        "id":      str(user["_id"]),
-        "name":    user["name"],
-        "email":   user["email"],
-        "credits": user["credits"],
-        "wins":    user["wins"],
-        "losses":  user["losses"],
+        "id":       str(user["_id"]),
+        "name":     user["name"],
+        "email":    user["email"],
+        "credits":  user["credits"],
+        "wins":     user["wins"],
+        "losses":   user["losses"],
+        "is_admin": user.get("is_admin", False) is True,
     })
 
 
@@ -886,12 +922,15 @@ def my_battles():
 
     result = []
     for b in raw:
-        pack       = mongo.db.packs.find_one({"_id": b["pack_id"]}, {"name": 1, "cost": 1})
-        pack_name  = pack["name"] if pack else "Unknown"
+        # Defensive reads — old battle documents may be missing fields.
+        pack_id    = b.get("pack_id")
+        pack       = mongo.db.packs.find_one({"_id": pack_id}, {"name": 1, "cost": 1}) if pack_id else None
+        pack_name  = pack["name"] if pack else "Unknown Pack"
         qty        = b.get("pack_quantity", 1)
         total_cost = b.get("pack_cost", 0) * qty
-        status     = b["status"]
-        is_creator = b["creator_id"] == uid
+        status     = b.get("status", "unknown")
+        creator_id = b.get("creator_id")
+        is_creator = (creator_id == uid) if creator_id else False
         is_bot     = b.get("is_bot_battle", False)
 
         if status == "cancelled":
@@ -907,7 +946,8 @@ def my_battles():
                       if b.get("opponent_id") else None
                 opponent_name = opp["name"] if opp else "Unknown"
             else:
-                creator = mongo.db.users.find_one({"_id": b["creator_id"]}, {"name": 1})
+                creator = mongo.db.users.find_one({"_id": creator_id}, {"name": 1}) \
+                          if creator_id else None
                 opponent_name = creator["name"] if creator else "Unknown"
 
             winner_id    = b.get("winner_id")
@@ -965,6 +1005,16 @@ def my_transactions():
         })
 
     return jsonify(result)
+
+
+# ---------------------------------------------------------------------------
+# Admin routes
+# ---------------------------------------------------------------------------
+
+@app.route("/api/admin/ping", methods=["GET"])
+@require_admin
+def admin_ping():
+    return jsonify({"ok": True, "message": "admin access confirmed"})
 
 
 # ---------------------------------------------------------------------------
