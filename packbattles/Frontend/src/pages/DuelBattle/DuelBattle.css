@@ -371,6 +371,45 @@
     cursor: not-allowed;
 }
 
+/* ---- Spectator Join Battle button ---- */
+
+.db-join-btn {
+    all: unset;
+    display: inline-block;
+    color: #fff;
+    font-size: 1.2rem;
+    font-weight: 600;
+    padding: 0.55rem 1.8rem;
+    border-radius: 2rem;
+    cursor: pointer;
+    margin-top: 1.2rem;
+    background: linear-gradient(180deg, #A35BFF 0%, #811FFF 100%);
+    transition: background 0.2s ease, opacity 0.2s ease;
+}
+
+.db-join-btn:hover:not(:disabled) {
+    background: linear-gradient(260deg, #A35BFF 0%, #811FFF 100%);
+}
+
+.db-join-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.db-join-error {
+    color: #f87171;
+    font-size: 1.15rem;
+    margin-top: 0.8rem;
+    margin-bottom: 0;
+}
+
+.db-join-afford {
+    color: rgba(248, 113, 113, 0.75);
+    font-size: 1.1rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0;
+}
+
 /* ---- Cancel battle button (creator, open state) ---- */
 
 .db-cancel-btn {

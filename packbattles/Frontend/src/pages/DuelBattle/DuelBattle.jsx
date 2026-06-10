@@ -66,6 +66,8 @@ const DuelBattle = () => {
     const [cancelError,   setCancelError]   = useState('');
     const [isBotBattling, setIsBotBattling] = useState(false);
     const [botError,      setBotError]      = useState('');
+    const [joining,       setJoining]       = useState(false);
+    const [joinError,     setJoinError]     = useState('');
 
     // ── Pack pool for roulette cycling (read-only, fetched once) ─────────────
     const [packPool, setPackPool] = useState([]);
@@ -127,7 +129,11 @@ const DuelBattle = () => {
                                 if (r.data.status === 'completed' || r.data.status === 'cancelled') {
                                     clearInterval(pollingRef.current);
                                     pollingRef.current = null;
-                                    setBattle(r.data);
+                                    // Guard: if reveal already started (from bot-join/join response
+                                    // that arrived before this in-flight poll), don't overwrite.
+                                    if (!revealStartedRef.current) {
+                                        setBattle(r.data);
+                                    }
                                 }
                             })
                             .catch(() => {});
@@ -295,13 +301,41 @@ const DuelBattle = () => {
                 clearInterval(pollingRef.current);
                 pollingRef.current = null;
             }
-            setBattle(res.data);
+            // Guard: if an in-flight poll already delivered the completed data
+            // and started the reveal, don't overwrite battle (would kill timers).
+            if (!revealStartedRef.current) {
+                setBattle(res.data);
+            }
         } catch (err) {
             setIsBotBattling(false);
             // 400 means race (human joined or cancelled) — polling will update UI naturally
             if (err.response?.status !== 400) {
                 setBotError('Bot join failed. Please try again.');
             }
+        }
+    };
+
+    // ── Join from spectator view ──────────────────────────────────────────────
+    const handleJoin = async () => {
+        setJoining(true);
+        setJoinError('');
+        try {
+            const res = await axios.post(
+                `${API}/api/battles/${id}/join`,
+                {},
+                { headers: { Authorization: `Bearer ${token}` } },
+            );
+            if (pollingRef.current) {
+                clearInterval(pollingRef.current);
+                pollingRef.current = null;
+            }
+            updateUser({ credits: Number(user.credits) - Number(battle?.total_cost) });
+            if (!revealStartedRef.current) {
+                setBattle(res.data);
+            }
+        } catch (err) {
+            setJoinError(err.response?.data?.error || 'Join failed. Please try again.');
+            setJoining(false);
         }
     };
 
@@ -340,8 +374,9 @@ const DuelBattle = () => {
     const isCancelled  = battle.status === 'cancelled';
     const isCreator    = user?.id === battle.creator_id;
     const isOpponent   = user?.id === battle.opponent_id;
-    const isSpectator  = !isCreator && !isOpponent;
-    const isRevealing  = isCompleted && !revealDone;
+    const isSpectator   = !isCreator && !isOpponent;
+    const canAffordJoin = Number(user?.credits) >= Number(battle.total_cost);
+    const isRevealing   = isCompleted && !revealDone;
     const creatorWins  = revealDone && battle.winner_side === 'creator';
     const opponentWins = revealDone && (battle.winner_side === 'opponent' || battle.winner_side === 'bot');
     const winner       = revealDone ? (creatorWins ? battle.creator_name : battle.opponent_name) : null;
@@ -609,6 +644,25 @@ const DuelBattle = () => {
                                                             >
                                                                 {isBotBattling ? 'Finding bot...' : 'Battle Bot'}
                                                             </button>
+                                                        </>
+                                                    )}
+                                                    {!isCreator && (
+                                                        <>
+                                                            {joinError && (
+                                                                <p className="db-join-error">{joinError}</p>
+                                                            )}
+                                                            <button
+                                                                className="db-join-btn"
+                                                                onClick={handleJoin}
+                                                                disabled={joining || !canAffordJoin}
+                                                            >
+                                                                {joining
+                                                                    ? 'Joining...'
+                                                                    : `Join Battle for ${battle.total_cost} cr`}
+                                                            </button>
+                                                            {!canAffordJoin && (
+                                                                <p className="db-join-afford">Not enough credits to join.</p>
+                                                            )}
                                                         </>
                                                     )}
                                                 </div>
