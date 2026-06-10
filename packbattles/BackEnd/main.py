@@ -235,6 +235,8 @@ def open_pack(pack_id):
         {"_id": ObjectId(g.user_id)},
         {"$set": {"credits": new_credits}},
     )
+    _log_tx(g.user_id, "pack_open_spend", -pack["cost"], new_credits,
+            "pack", oid, f"Opened {pack['name']}")
 
     now = datetime.now(timezone.utc)
     try:
@@ -328,6 +330,26 @@ def _card_detail(card):
         "rarity":    card["rarity"],
         "value":     card["value"],
     }
+
+
+def _log_tx(user_id, tx_type, amount, balance_after, ref_type, ref_id, note):
+    """
+    Append one credit event to credit_transactions.
+    Failures are swallowed — the log must never block a credit action.
+    """
+    try:
+        mongo.db.credit_transactions.insert_one({
+            "user_id":       ObjectId(str(user_id)),
+            "type":          tx_type,
+            "amount":        amount,
+            "balance_after": balance_after,
+            "ref_type":      ref_type,
+            "ref_id":        ObjectId(str(ref_id)),
+            "note":          note,
+            "created_at":    datetime.now(timezone.utc),
+        })
+    except Exception:
+        pass  # audit log failure must never surface to the caller
 
 
 @app.route("/api/battles", methods=["GET"])
@@ -430,6 +452,10 @@ def create_battle():
         "created_at":     now,
         "completed_at":   None,
     })
+
+    _log_tx(creator_id, "battle_create_spend", -total_cost,
+            user["credits"] - total_cost,
+            "battle", result.inserted_id, f"Created battle: {pack['name']} ×{pack_quantity}")
 
     # Return only metadata — creator's draw is intentionally omitted
     return jsonify({
@@ -566,6 +592,9 @@ def join_battle(battle_id):
         {"_id": opponent_id},
         {"$inc": {"credits": -total_cost}},
     )
+    _log_tx(opponent_id, "battle_join_spend", -total_cost,
+            opponent["credits"] - total_cost,
+            "battle", bid, f"Joined battle: {pack['name']} ×{pack_quantity}")
 
     # Resolve: higher total wins; exact tie → coin flip
     creator_total = battle["creator_total"]
@@ -826,6 +855,12 @@ def cancel_battle(battle_id):
         if blocked:
             return jsonify({"error": "Battle could not be cancelled — it may have just been joined"}), 400
         return jsonify({"error": "Cancel failed; please try again"}), 500
+
+    # Transaction committed — read actual post-refund balance for the log.
+    creator_now = mongo.db.users.find_one({"_id": creator_oid}, {"credits": 1})
+    _log_tx(creator_oid, "battle_cancel_refund", total_cost,
+            creator_now["credits"] if creator_now else None,
+            "battle", bid, f"Cancelled battle: refund of {total_cost} cr")
 
     return jsonify({"status": "cancelled", "credits_refunded": total_cost})
 
