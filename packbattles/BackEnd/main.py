@@ -623,11 +623,8 @@ def join_battle(battle_id):
     pack_quantity = battle.get("pack_quantity", 1)
     total_cost    = pack["cost"] * pack_quantity
 
-    opponent = mongo.db.users.find_one({"_id": opponent_id})
-    if opponent["credits"] < total_cost:
-        return jsonify({"error": "Insufficient credits"}), 400
-
-    # Draw pack_quantity packs for the opponent
+    # Draw opponent's packs and resolve the winner before entering the
+    # transaction — pure computation, no DB writes, safe to discard on failure.
     opp_drawn_ids  = []
     opp_drawn_docs = []
     opponent_total = 0.0
@@ -637,16 +634,6 @@ def join_battle(battle_id):
         opp_drawn_docs.extend(docs)
         opponent_total += subtotal
 
-    # Deduct total cost from opponent
-    mongo.db.users.update_one(
-        {"_id": opponent_id},
-        {"$inc": {"credits": -total_cost}},
-    )
-    _log_tx(opponent_id, "battle_join_spend", -total_cost,
-            opponent["credits"] - total_cost,
-            "battle", bid, f"Joined battle: {pack['name']} ×{pack_quantity}")
-
-    # Resolve: higher total wins; exact tie → coin flip
     creator_total = battle["creator_total"]
     tiebreaker    = None
 
@@ -659,11 +646,69 @@ def join_battle(battle_id):
         tiebreaker = flip
         winner_id  = battle["creator_id"] if flip == "creator" else opponent_id
 
-    loser_id  = opponent_id if winner_id == battle["creator_id"] else battle["creator_id"]
-    now       = datetime.now(timezone.utc)
-    all_cards = battle["creator_cards"] + opp_drawn_ids
+    loser_id = opponent_id if winner_id == battle["creator_id"] else battle["creator_id"]
+    now      = datetime.now(timezone.utc)
 
-    # Transfer all drawn cards to winner's inventory
+    # Atomic: claim the battle and deduct opponent credits in one transaction.
+    #
+    #   Step 1 — battle claim: update_one with {"status": "open"} in the filter.
+    #            Two concurrent joiners can never both get matched_count == 1.
+    #            The full result is written here so the battle is immediately
+    #            consistent if the transaction commits.
+    #
+    #   Step 2 — credit deduction: find_one_and_update with $gte guard.
+    #            If the opponent has insufficient credits, RuntimeError is raised,
+    #            the transaction aborts, and the battle claim from Step 1 is
+    #            rolled back — the battle returns to "open" for others.
+    #
+    # Any other exception is a genuine DB error → 500.
+    battle_taken         = False
+    insufficient_credits = False
+    new_credits          = None
+    try:
+        with mongo.db.client.start_session() as session:
+            with session.start_transaction():
+                claim = mongo.db.battles.update_one(
+                    {"_id": bid, "status": "open"},
+                    {"$set": {
+                        "status":         "completed",
+                        "opponent_id":    opponent_id,
+                        "opponent_cards": opp_drawn_ids,
+                        "opponent_total": opponent_total,
+                        "winner_id":      winner_id,
+                        "tiebreaker":     tiebreaker,
+                        "completed_at":   now,
+                    }},
+                    session=session,
+                )
+                if claim.matched_count == 0:
+                    battle_taken = True
+                    raise RuntimeError("battle_taken")
+
+                credit_update = mongo.db.users.find_one_and_update(
+                    {"_id": opponent_id, "credits": {"$gte": total_cost}},
+                    {"$inc": {"credits": -total_cost}},
+                    return_document=True,
+                    projection={"credits": 1},
+                    session=session,
+                )
+                if credit_update is None:
+                    insufficient_credits = True
+                    raise RuntimeError("insufficient_credits")
+
+                new_credits = credit_update["credits"]
+    except Exception:
+        if battle_taken:
+            return jsonify({"error": "Battle is no longer available — it may have just been joined or cancelled"}), 400
+        if insufficient_credits:
+            return jsonify({"error": "Insufficient credits"}), 400
+        return jsonify({"error": "Failed to join battle. Please try again."}), 500
+
+    # Transaction committed — opponent paid, battle is resolved.
+    # Inventory, win/loss tallies, and the credit log are written outside the
+    # transaction: they are idempotent / append-only and do not affect the
+    # credit-safety or exclusivity guarantees above.
+    all_cards = battle["creator_cards"] + opp_drawn_ids
     for cid in all_cards:
         mongo.db.inventory.update_one(
             {"user_id": winner_id, "card_id": cid},
@@ -674,23 +719,12 @@ def join_battle(battle_id):
             upsert=True,
         )
 
-    # Update win / loss records
     mongo.db.users.update_one({"_id": winner_id}, {"$inc": {"wins":   1}})
     mongo.db.users.update_one({"_id": loser_id},  {"$inc": {"losses": 1}})
 
-    # Finalise battle document
-    mongo.db.battles.update_one(
-        {"_id": bid},
-        {"$set": {
-            "status":         "completed",
-            "opponent_id":    opponent_id,
-            "opponent_cards": opp_drawn_ids,
-            "opponent_total": opponent_total,
-            "winner_id":      winner_id,
-            "tiebreaker":     tiebreaker,
-            "completed_at":   now,
-        }},
-    )
+    _log_tx(opponent_id, "battle_join_spend", -total_cost,
+            new_credits,
+            "battle", bid, f"Joined battle: {pack['name']} ×{pack_quantity}")
 
     # Build full card detail lists for the simultaneous reveal
     creator_card_details  = [
