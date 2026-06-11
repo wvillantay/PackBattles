@@ -4,7 +4,7 @@ import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import './Admin.css';
 
-const API = 'http://localhost:8080';
+import { API } from '../../api';
 
 const STATUS_OPTIONS = [
     { value: '',          label: 'All Statuses' },

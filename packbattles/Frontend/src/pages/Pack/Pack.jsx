@@ -9,7 +9,7 @@ import { useAuth } from '../../context/AuthContext';
 import StartNow from '../../components/StartNow/StartNow';
 import './Pack.css';
 
-const API = 'http://localhost:8080';
+import { API } from '../../api';
 
 const RARITY_LABEL = {
     common:     'COMMON',

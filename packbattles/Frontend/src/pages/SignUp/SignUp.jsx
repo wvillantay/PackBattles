@@ -5,7 +5,7 @@ import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import './SignUp.css';
 
-const API = 'http://localhost:8080';
+import { API } from '../../api';
 
 const SignUp = () => {
     const { login } = useAuth();

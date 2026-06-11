@@ -4,7 +4,7 @@ import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import './Profile.css';
 
-const API = 'http://localhost:8080';
+import { API } from '../../api';
 
 const Profile = () => {
     const { token, user } = useAuth();

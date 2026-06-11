@@ -6,7 +6,7 @@ import './Packs.css';
 import PackCard from '../../components/PackCard/PackCard';
 import StartNow from '../../components/StartNow/StartNow';
 
-const API = 'http://localhost:8080';
+import { API } from '../../api';
 
 const Packs = () => {
     const [packs, setPacks] = useState([]);

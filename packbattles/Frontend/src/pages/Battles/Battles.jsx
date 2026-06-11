@@ -6,7 +6,7 @@ import { IoMdSearch } from 'react-icons/io';
 import StartNow from '../../components/StartNow/StartNow';
 import './Battles.css';
 
-const API = 'http://localhost:8080';
+import { API } from '../../api';
 
 const QTY_OPTIONS = [1, 2, 3, 5, 10];
 

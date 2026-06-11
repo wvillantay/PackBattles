@@ -4,7 +4,7 @@ import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import './Admin.css';
 
-const API = 'http://localhost:8080';
+import { API } from '../../api';
 
 const TX_LABEL = {
     pack_open_spend:         'Pack Opened',

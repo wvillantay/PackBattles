@@ -6,7 +6,7 @@ import ModeCard from '../../components/ModeCard/ModeCard';
 import PlayerProfileCard from '../../components/PlayerProfileCard/PlayerProfileCard';
 import './DuelBattle.css';
 
-const API = 'http://localhost:8080';
+import { API } from '../../api';
 
 const RARITY_COLOR = {
     common:     '#9ca3af',
