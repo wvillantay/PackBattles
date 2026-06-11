@@ -89,11 +89,12 @@ const DuelBattle = () => {
     const frameCreatorRef  = useRef(0);
     const frameOpponentRef = useRef(0);
 
-    const pollingRef       = useRef(null);
-    const timerCreatorRef  = useRef(null); // creator's spin chain timer
-    const timerOpponentRef = useRef(null); // opponent's spin chain timer
-    const timerPairRef     = useRef(null); // pair-gap / initial-delay timer
-    const revealStartedRef = useRef(false);
+    const pollingRef          = useRef(null);
+    const timerCreatorRef     = useRef(null); // creator's spin chain timer
+    const timerOpponentRef    = useRef(null); // opponent's spin chain timer
+    const timerPairRef        = useRef(null); // pair-gap / initial-delay timer
+    const revealStartedRef    = useRef(false);
+    const wasAlreadyCompleted = useRef(false); // true when initial fetch returns completed — skip animation
 
     // ── Fetch battle, then pack pool ──────────────────────────────────────────
     useEffect(() => {
@@ -118,6 +119,18 @@ const DuelBattle = () => {
 
                 if (!active) return;
                 setPackPool(pool);
+
+                if (battleData.status === 'completed') {
+                    // Battle was already over when this page opened (history / direct link).
+                    // Set refs BEFORE setBattle so the animation useEffect sees
+                    // revealStartedRef.current === true and exits without starting timers.
+                    wasAlreadyCompleted.current = true;
+                    revealStartedRef.current    = true;
+                    setRevealedCreator(battleData.creator_cards.length);
+                    setRevealedOpponent(battleData.opponent_cards.length);
+                    setRevealDone(true);
+                }
+
                 setBattle(battleData);
                 setLoading(false);
 
@@ -252,7 +265,7 @@ const DuelBattle = () => {
 
     // ── Show popup once all cards have landed ─────────────────────────────────
     useEffect(() => {
-        if (revealDone) setShowPopup(true);
+        if (revealDone && !wasAlreadyCompleted.current) setShowPopup(true);
     }, [revealDone]);
 
     // ── Skip — instantly show all server-drawn cards ──────────────────────────
