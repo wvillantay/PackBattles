@@ -28,7 +28,9 @@ if not jwt_secret:
     )
 
 app = Flask(__name__)
-CORS(app, origins="*")
+_cors_raw = os.getenv("CORS_ORIGINS", "*")
+_cors_origins = _cors_raw.split(",") if "," in _cors_raw else _cors_raw
+CORS(app, origins=_cors_origins)
 app.config["MONGO_URI"] = mongo_uri
 mongo = PyMongo(app)
 
@@ -1426,4 +1428,6 @@ def index():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=8080)
+    _debug = os.getenv("FLASK_DEBUG", "true").lower() == "true"
+    _port  = int(os.getenv("PORT", 8080))
+    app.run(debug=_debug, port=_port)
