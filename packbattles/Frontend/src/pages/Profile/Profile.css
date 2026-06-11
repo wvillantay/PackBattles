@@ -113,10 +113,46 @@
     letter-spacing: 0.08em;
 }
 
+/* ---- Tab switcher ---- */
+
+.pf-tabs {
+    display: flex;
+    gap: 0.8rem;
+    margin: 2rem 0 2.5rem;
+    flex-wrap: wrap;
+}
+
+.pf-tab-btn {
+    appearance: none;
+    background: rgba(33, 0, 75, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 1rem;
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 1.4rem;
+    font-weight: 500;
+    font-family: inherit;
+    padding: 0.8rem 2rem;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    white-space: nowrap;
+}
+
+.pf-tab-btn:hover {
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.3);
+    background: rgba(33, 0, 75, 0.32);
+}
+
+.pf-tab-active {
+    background: linear-gradient(180deg, #A35BFF 0%, #811FFF 100%) !important;
+    border-color: transparent !important;
+    color: #fff !important;
+}
+
 /* ---- History section ---- */
 
 .pf-history {
-    margin-top: 1rem;
+    margin-top: 0;
 }
 
 .pf-section-title {
@@ -277,7 +313,7 @@
 /* ---- Credit History section ---- */
 
 .pf-credit-history {
-    margin-top: 4rem;
+    margin-top: 0;
 }
 
 .pf-tx-type {

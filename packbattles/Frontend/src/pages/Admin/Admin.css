@@ -128,6 +128,7 @@
 
 .admin-filters {
     display: flex;
+    align-items: center;
     gap: 1.2rem;
     margin-bottom: 2rem;
     flex-wrap: wrap;
@@ -215,6 +216,7 @@
     border: none;
     background: transparent !important;
     padding: 0 1rem 0.6rem;
+    white-space: nowrap;
 }
 
 .admin-table tbody tr {
@@ -386,7 +388,7 @@
 
 .admin-btn-primary {
     display: inline-block;
-    padding: 0.85rem 2rem;
+    padding: 0.8rem 2rem;
     border-radius: 1rem;
     font-size: 1.4rem;
     font-weight: 700;
@@ -429,7 +431,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 1rem;
-    align-items: flex-end;
+    align-items: center;
 }
 
 .admin-adjust-success {
@@ -470,7 +472,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 1.6rem;
-    margin-bottom: 3rem;
+    margin-bottom: 2.4rem;
 }
 
 .admin-stat-card {
@@ -515,7 +517,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 1.2rem;
-    margin-bottom: 3.5rem;
+    margin-bottom: 2.8rem;
 }
 
 .admin-meta-item {
@@ -536,7 +538,7 @@
 }
 
 .admin-section {
-    margin-top: 3.5rem;
+    margin-top: 3rem;
 }
 
 /* ---- Result badge (reused on user detail battles) ---- */
@@ -586,5 +588,15 @@
     .admin-table thead th,
     .admin-table tbody td p {
         font-size: 1.2rem;
+    }
+
+    .admin-adjust-form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .admin-adjust-form .admin-input,
+    .admin-adjust-form .admin-btn-primary {
+        width: 100% !important;
     }
 }

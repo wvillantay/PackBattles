@@ -61,6 +61,12 @@
     font-size: 2.4rem;
 }
 
+.header-user-area {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+}
+
 .pf-user-link {
     font-size: 1.4rem;
     color: #fff !important;

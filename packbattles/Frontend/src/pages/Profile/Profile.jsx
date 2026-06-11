@@ -18,6 +18,7 @@ const Profile = () => {
     const [statsError,     setStatsError]     = useState('');
     const [battlesError,   setBattlesError]   = useState('');
     const [txError,        setTxError]        = useState('');
+    const [activeTab,      setActiveTab]      = useState('battles');
 
     useEffect(() => {
         axios
@@ -108,144 +109,163 @@ const Profile = () => {
                     </div>
                 )}
 
-                <div className="pf-history" data-aos="fade-up">
-                    <h3 className="pf-section-title">Recent Battles</h3>
-
-                    {battlesLoading && <p className="pf-status">Loading battle history...</p>}
-                    {battlesError   && <p className="pf-error">{battlesError}</p>}
-
-                    {!battlesLoading && !battlesError && battles.length === 0 && (
-                        <p className="pf-status">
-                            No battles yet.{' '}
-                            <Link to="/battles" className="pf-link">Start one!</Link>
-                        </p>
-                    )}
-
-                    {battles.length > 0 && (
-                        <div className="table-responsive pf-table-wrap">
-                            <table className="table pf-table">
-                                <thead>
-                                    <tr>
-                                        <th>DATE</th>
-                                        <th>PACK</th>
-                                        <th>VS</th>
-                                        <th>RESULT</th>
-                                        <th>YOUR TOTAL</th>
-                                        <th>THEIR TOTAL</th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {battles.map(b => {
-                                        const dateStr  = formatDate(b.completed_at || b.cancelled_at);
-                                        const packLabel = b.pack_quantity > 1
-                                            ? `${b.pack_name} ×${b.pack_quantity}`
-                                            : b.pack_name;
-
-                                        return (
-                                            <tr key={b.id}>
-                                                <td><p>{dateStr}</p></td>
-                                                <td><p>{packLabel}</p></td>
-                                                <td>
-                                                    <p>
-                                                        {b.opponent_name ?? '—'}
-                                                        {b.is_bot_battle && (
-                                                            <span className="pf-bot-badge">BOT</span>
-                                                        )}
-                                                    </p>
-                                                </td>
-                                                <td>
-                                                    <span className={`pf-result-badge ${resultClass(b.result)}`}>
-                                                        {b.result.toUpperCase()}
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    <p className="pf-total">
-                                                        {b.my_total != null
-                                                            ? `${Number(b.my_total).toFixed(2)} cr`
-                                                            : '—'}
-                                                    </p>
-                                                </td>
-                                                <td>
-                                                    <p className="pf-total">
-                                                        {b.their_total != null
-                                                            ? `${Number(b.their_total).toFixed(2)} cr`
-                                                            : '—'}
-                                                    </p>
-                                                </td>
-                                                <td>
-                                                    <Link
-                                                        to={`/duel-battle/${b.id}`}
-                                                        className="pf-view-btn"
-                                                    >
-                                                        View
-                                                    </Link>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
+                <div className="pf-tabs">
+                    <button
+                        className={`pf-tab-btn${activeTab === 'battles' ? ' pf-tab-active' : ''}`}
+                        onClick={() => setActiveTab('battles')}
+                    >
+                        Recent Battles
+                    </button>
+                    <button
+                        className={`pf-tab-btn${activeTab === 'transactions' ? ' pf-tab-active' : ''}`}
+                        onClick={() => setActiveTab('transactions')}
+                    >
+                        Credit History
+                    </button>
                 </div>
 
-                <div className="pf-credit-history">
-                    <h3 className="pf-section-title">Credit History</h3>
+                {activeTab === 'battles' && (
+                    <div className="pf-history">
+                        <h3 className="pf-section-title">Recent Battles</h3>
 
-                    {txLoading && <p className="pf-status">Loading credit history...</p>}
-                    {txError   && <p className="pf-error">{txError}</p>}
+                        {battlesLoading && <p className="pf-status">Loading battle history...</p>}
+                        {battlesError   && <p className="pf-error">{battlesError}</p>}
 
-                    {!txLoading && !txError && transactions.length === 0 && (
-                        <p className="pf-status">No transactions yet.</p>
-                    )}
+                        {!battlesLoading && !battlesError && battles.length === 0 && (
+                            <p className="pf-status">
+                                No battles yet.{' '}
+                                <Link to="/battles" className="pf-link">Start one!</Link>
+                            </p>
+                        )}
 
-                    {transactions.length > 0 && (
-                        <div className="table-responsive pf-table-wrap">
-                            <table className="table pf-table">
-                                <thead>
-                                    <tr>
-                                        <th>DATE</th>
-                                        <th>CATEGORY</th>
-                                        <th>NOTE</th>
-                                        <th>AMOUNT</th>
-                                        <th>BALANCE</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {transactions.map(tx => {
-                                        const isPositive = tx.amount > 0;
-                                        const sign       = isPositive ? '+' : '−';
-                                        const absAmt     = Math.abs(tx.amount);
-                                        return (
-                                            <tr key={tx.id}>
-                                                <td><p>{formatDate(tx.created_at)}</p></td>
-                                                <td>
-                                                    <p className="pf-tx-type">
-                                                        {TX_LABEL[tx.type] || tx.type}
-                                                    </p>
-                                                </td>
-                                                <td>
-                                                    <p className="pf-tx-note">{tx.note || '—'}</p>
-                                                </td>
-                                                <td>
-                                                    <p className={isPositive ? 'pf-tx-amount-pos' : 'pf-tx-amount-neg'}>
-                                                        {sign}{absAmt} cr
-                                                    </p>
-                                                </td>
-                                                <td>
-                                                    <p className="pf-tx-balance">
-                                                        {tx.balance_after != null ? `${tx.balance_after} cr` : '—'}
-                                                    </p>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </div>
+                        {battles.length > 0 && (
+                            <div className="table-responsive pf-table-wrap">
+                                <table className="table pf-table">
+                                    <thead>
+                                        <tr>
+                                            <th>DATE</th>
+                                            <th>PACK</th>
+                                            <th>VS</th>
+                                            <th>RESULT</th>
+                                            <th>YOUR TOTAL</th>
+                                            <th>THEIR TOTAL</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {battles.map(b => {
+                                            const dateStr  = formatDate(b.completed_at || b.cancelled_at);
+                                            const packLabel = b.pack_quantity > 1
+                                                ? `${b.pack_name} ×${b.pack_quantity}`
+                                                : b.pack_name;
+
+                                            return (
+                                                <tr key={b.id}>
+                                                    <td><p>{dateStr}</p></td>
+                                                    <td><p>{packLabel}</p></td>
+                                                    <td>
+                                                        <p>
+                                                            {b.opponent_name ?? '—'}
+                                                            {b.is_bot_battle && (
+                                                                <span className="pf-bot-badge">BOT</span>
+                                                            )}
+                                                        </p>
+                                                    </td>
+                                                    <td>
+                                                        <span className={`pf-result-badge ${resultClass(b.result)}`}>
+                                                            {b.result.toUpperCase()}
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <p className="pf-total">
+                                                            {b.my_total != null
+                                                                ? `${Number(b.my_total).toFixed(2)} cr`
+                                                                : '—'}
+                                                        </p>
+                                                    </td>
+                                                    <td>
+                                                        <p className="pf-total">
+                                                            {b.their_total != null
+                                                                ? `${Number(b.their_total).toFixed(2)} cr`
+                                                                : '—'}
+                                                        </p>
+                                                    </td>
+                                                    <td>
+                                                        <Link
+                                                            to={`/duel-battle/${b.id}`}
+                                                            className="pf-view-btn"
+                                                        >
+                                                            View
+                                                        </Link>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {activeTab === 'transactions' && (
+                    <div className="pf-credit-history">
+                        <h3 className="pf-section-title">Credit History</h3>
+
+                        {txLoading && <p className="pf-status">Loading credit history...</p>}
+                        {txError   && <p className="pf-error">{txError}</p>}
+
+                        {!txLoading && !txError && transactions.length === 0 && (
+                            <p className="pf-status">No transactions yet.</p>
+                        )}
+
+                        {transactions.length > 0 && (
+                            <div className="table-responsive pf-table-wrap">
+                                <table className="table pf-table">
+                                    <thead>
+                                        <tr>
+                                            <th>DATE</th>
+                                            <th>CATEGORY</th>
+                                            <th>NOTE</th>
+                                            <th>AMOUNT</th>
+                                            <th>BALANCE</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {transactions.map(tx => {
+                                            const isPositive = tx.amount > 0;
+                                            const sign       = isPositive ? '+' : '−';
+                                            const absAmt     = Math.abs(tx.amount);
+                                            return (
+                                                <tr key={tx.id}>
+                                                    <td><p>{formatDate(tx.created_at)}</p></td>
+                                                    <td>
+                                                        <p className="pf-tx-type">
+                                                            {TX_LABEL[tx.type] || tx.type}
+                                                        </p>
+                                                    </td>
+                                                    <td>
+                                                        <p className="pf-tx-note">{tx.note || '—'}</p>
+                                                    </td>
+                                                    <td>
+                                                        <p className={isPositive ? 'pf-tx-amount-pos' : 'pf-tx-amount-neg'}>
+                                                            {sign}{absAmt} cr
+                                                        </p>
+                                                    </td>
+                                                    <td>
+                                                        <p className="pf-tx-balance">
+                                                            {tx.balance_after != null ? `${tx.balance_after} cr` : '—'}
+                                                        </p>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                )}
 
             </div>
         </section>

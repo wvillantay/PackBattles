@@ -57,12 +57,12 @@ const Header = () => {
 
                         <div className="header-buttons ms-auto d-flex align-items-center">
                             {user ? (
-                                <>
-                                    <Link to="/profile" className='me-3 pf-user-link'>
+                                <div className="header-user-area">
+                                    <Link to="/profile" className='pf-user-link'>
                                         {user.name} &nbsp;·&nbsp; {user.credits} credits
                                     </Link>
                                     {user.is_admin && (
-                                        <Link to="/admin" className="me-3 admin-nav-link">Admin</Link>
+                                        <Link to="/admin" className="admin-nav-link">Admin</Link>
                                     )}
                                     <button
                                         className='signup-btn'
@@ -71,7 +71,7 @@ const Header = () => {
                                     >
                                         Log Out
                                     </button>
-                                </>
+                                </div>
                             ) : (
                                 <>
                                     <Link className='me-3' to="/login" data-aos="fade-down">Log In</Link>
