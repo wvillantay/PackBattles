@@ -1118,6 +1118,7 @@ def admin_transactions():
     valid_types = {
         "pack_open_spend", "battle_create_spend",
         "battle_join_spend", "battle_cancel_refund",
+        "admin_credit_adjustment",
     }
     query = {}
     if type_filter in valid_types:
@@ -1129,19 +1130,25 @@ def admin_transactions():
         .limit(50)
     )
 
-    # Batch-fetch user names
-    user_ids  = list({tx["user_id"] for tx in raw if tx.get("user_id")})
+    # Batch-fetch all needed user names in one query:
+    # target user_ids + admin_ids from adjustment records.
+    all_ids = set()
+    for tx in raw:
+        if tx.get("user_id"):  all_ids.add(tx["user_id"])
+        if tx.get("admin_id"): all_ids.add(tx["admin_id"])
     users_map = {
         str(u["_id"]): u.get("name", "Unknown")
-        for u in mongo.db.users.find({"_id": {"$in": user_ids}}, {"name": 1})
+        for u in mongo.db.users.find({"_id": {"$in": list(all_ids)}}, {"name": 1})
     }
 
     result = []
     for tx in raw:
-        uid = tx.get("user_id")
+        uid      = tx.get("user_id")
+        admin_id = tx.get("admin_id")
         result.append({
             "id":            str(tx["_id"]),
             "user_name":     users_map.get(str(uid), "Unknown") if uid else "Unknown",
+            "admin_name":    users_map.get(str(admin_id)) if admin_id else None,
             "type":          tx.get("type", ""),
             "note":          tx.get("note", ""),
             "amount":        tx.get("amount"),

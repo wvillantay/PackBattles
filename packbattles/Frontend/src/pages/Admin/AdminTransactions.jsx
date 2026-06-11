@@ -85,6 +85,7 @@ const AdminTransactions = () => {
                                     <th>USER</th>
                                     <th>CATEGORY</th>
                                     <th>NOTE</th>
+                                    <th>ADMIN</th>
                                     <th>AMOUNT</th>
                                     <th>BALANCE</th>
                                 </tr>
@@ -106,6 +107,7 @@ const AdminTransactions = () => {
                                             <td>
                                                 <p className="admin-tx-note">{tx.note || '—'}</p>
                                             </td>
+                                            <td><p>{tx.admin_name || '—'}</p></td>
                                             <td>
                                                 <p className={isPos ? 'admin-tx-pos' : 'admin-tx-neg'}>
                                                     {sign}{absAmt} cr
@@ -121,7 +123,7 @@ const AdminTransactions = () => {
                                 })}
                                 {transactions.length === 0 && (
                                     <tr>
-                                        <td colSpan={6}>
+                                        <td colSpan={7}>
                                             <p className="admin-empty">No transactions found.</p>
                                         </td>
                                     </tr>
