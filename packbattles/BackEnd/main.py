@@ -459,23 +459,30 @@ def create_battle():
     total_cost = pack["cost"] * pack_quantity
 
     creator_id = ObjectId(g.user_id)
-    user       = mongo.db.users.find_one({"_id": creator_id})
-    if user["credits"] < total_cost:
+
+    # Atomically deduct credits only if the creator has enough.
+    # The $gte filter is the guard: a parallel request that already consumed
+    # the balance will find no matching document and return None → 400.
+    # return_document=True gives the post-$inc balance, so the log is exact.
+    updated = mongo.db.users.find_one_and_update(
+        {"_id": creator_id, "credits": {"$gte": total_cost}},
+        {"$inc": {"credits": -total_cost}},
+        return_document=True,
+        projection={"credits": 1},
+    )
+    if updated is None:
         return jsonify({"error": "Insufficient credits"}), 400
 
-    # Draw pack_quantity packs for the creator — stored hidden until battle resolves
+    new_credits = updated["credits"]
+
+    # Draw pack_quantity packs for the creator — stored hidden until battle resolves.
+    # Drawing happens after the deduction is committed.
     all_drawn_ids = []
     creator_total  = 0.0
     for _ in range(pack_quantity):
         ids, _docs, subtotal = _draw_from_pack(pack)
         all_drawn_ids.extend(ids)
         creator_total += subtotal
-
-    # Deduct total cost from creator
-    mongo.db.users.update_one(
-        {"_id": creator_id},
-        {"$inc": {"credits": -total_cost}},
-    )
 
     now    = datetime.now(timezone.utc)
     result = mongo.db.battles.insert_one({
@@ -497,7 +504,7 @@ def create_battle():
     })
 
     _log_tx(creator_id, "battle_create_spend", -total_cost,
-            user["credits"] - total_cost,
+            new_credits,
             "battle", result.inserted_id, f"Created battle: {pack['name']} ×{pack_quantity}")
 
     # Return only metadata — creator's draw is intentionally omitted
