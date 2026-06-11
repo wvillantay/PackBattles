@@ -7,18 +7,20 @@ import './Admin.css';
 const API = 'http://localhost:8080';
 
 const TX_LABEL = {
-    pack_open_spend:      'Pack Opened',
-    battle_create_spend:  'Battle Created',
-    battle_join_spend:    'Battle Joined',
-    battle_cancel_refund: 'Battle Refunded',
+    pack_open_spend:         'Pack Opened',
+    battle_create_spend:     'Battle Created',
+    battle_join_spend:       'Battle Joined',
+    battle_cancel_refund:    'Battle Refunded',
+    admin_credit_adjustment: 'Admin Adjustment',
 };
 
 const TYPE_OPTIONS = [
-    { value: '',                     label: 'All Types' },
-    { value: 'pack_open_spend',      label: 'Pack Opened' },
-    { value: 'battle_create_spend',  label: 'Battle Created' },
-    { value: 'battle_join_spend',    label: 'Battle Joined' },
-    { value: 'battle_cancel_refund', label: 'Battle Refunded' },
+    { value: '',                        label: 'All Types' },
+    { value: 'pack_open_spend',         label: 'Pack Opened' },
+    { value: 'battle_create_spend',     label: 'Battle Created' },
+    { value: 'battle_join_spend',       label: 'Battle Joined' },
+    { value: 'battle_cancel_refund',    label: 'Battle Refunded' },
+    { value: 'admin_credit_adjustment', label: 'Admin Adjustment' },
 ];
 
 const AdminTransactions = () => {

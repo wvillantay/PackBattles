@@ -41,10 +41,11 @@ const Profile = () => {
     }, [token]);
 
     const TX_LABEL = {
-        pack_open_spend:      'Pack Opened',
-        battle_create_spend:  'Battle Created',
-        battle_join_spend:    'Battle Joined',
-        battle_cancel_refund: 'Battle Refunded',
+        pack_open_spend:         'Pack Opened',
+        battle_create_spend:     'Battle Created',
+        battle_join_spend:       'Battle Joined',
+        battle_cancel_refund:    'Battle Refunded',
+        admin_credit_adjustment: 'Admin Adjustment',
     };
 
     const winRate =

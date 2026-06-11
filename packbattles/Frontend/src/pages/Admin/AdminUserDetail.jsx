@@ -7,10 +7,11 @@ import './Admin.css';
 const API = 'http://localhost:8080';
 
 const TX_LABEL = {
-    pack_open_spend:      'Pack Opened',
-    battle_create_spend:  'Battle Created',
-    battle_join_spend:    'Battle Joined',
-    battle_cancel_refund: 'Battle Refunded',
+    pack_open_spend:         'Pack Opened',
+    battle_create_spend:     'Battle Created',
+    battle_join_spend:       'Battle Joined',
+    battle_cancel_refund:    'Battle Refunded',
+    admin_credit_adjustment: 'Admin Adjustment',
 };
 
 const AdminUserDetail = () => {
@@ -21,6 +22,15 @@ const AdminUserDetail = () => {
     const [loading, setLoading] = useState(true);
     const [error,   setError]   = useState('');
 
+    const [adjust, setAdjust] = useState({
+        amount:     '',
+        reason:     '',
+        submitting: false,
+        success:    '',
+        error:      '',
+    });
+
+    // Initial load — shows the loading spinner
     useEffect(() => {
         setLoading(true);
         setError('');
@@ -33,6 +43,49 @@ const AdminUserDetail = () => {
             })
             .finally(() => setLoading(false));
     }, [id, token]);
+
+    // Silent re-fetch after adjustment — keeps the page stable
+    const refresh = () => {
+        axios
+            .get(`${API}/api/admin/users/${id}`, { headers: { Authorization: `Bearer ${token}` } })
+            .then(res => setData(res.data))
+            .catch(() => {});
+    };
+
+    const handleAdjust = async (e) => {
+        e.preventDefault();
+
+        const parsedAmount = parseInt(adjust.amount, 10);
+        if (!adjust.amount || isNaN(parsedAmount) || parsedAmount === 0) {
+            setAdjust(prev => ({ ...prev, error: 'Amount must be a non-zero integer.', success: '' }));
+            return;
+        }
+        if (!adjust.reason.trim()) {
+            setAdjust(prev => ({ ...prev, error: 'Reason is required.', success: '' }));
+            return;
+        }
+
+        setAdjust(prev => ({ ...prev, submitting: true, error: '', success: '' }));
+
+        try {
+            const res = await axios.post(
+                `${API}/api/admin/users/${id}/adjust_credits`,
+                { amount: parsedAmount, reason: adjust.reason.trim() },
+                { headers: { Authorization: `Bearer ${token}` } },
+            );
+            setAdjust({
+                amount:     '',
+                reason:     '',
+                submitting: false,
+                success:    `Done. New balance: ${res.data.new_balance} credits.`,
+                error:      '',
+            });
+            refresh();
+        } catch (err) {
+            const msg = err.response?.data?.error || 'Adjustment failed. Try again.';
+            setAdjust(prev => ({ ...prev, submitting: false, error: msg, success: '' }));
+        }
+    };
 
     const formatDate = (iso) => {
         if (!iso) return '—';
@@ -62,7 +115,9 @@ const AdminUserDetail = () => {
                 <div className="admin-header">
                     <h2>
                         {loading ? 'User Detail' : (user?.name ?? 'User Detail')}
-                        {user?.is_admin && <span className="admin-badge" style={{ marginLeft: '1rem', fontSize: '1.4rem' }}>ADMIN</span>}
+                        {user?.is_admin && (
+                            <span className="admin-badge" style={{ marginLeft: '1rem', fontSize: '1.4rem' }}>ADMIN</span>
+                        )}
                     </h2>
                     <Link to="/admin/users" className="admin-back">← Users</Link>
                 </div>
@@ -88,7 +143,7 @@ const AdminUserDetail = () => {
                             </div>
                         </div>
 
-                        {/* Email + joined */}
+                        {/* Email / joined / ID */}
                         <div className="admin-meta">
                             <span className="admin-meta-item">
                                 <strong>Email:</strong> {user.email}
@@ -99,6 +154,41 @@ const AdminUserDetail = () => {
                             <span className="admin-meta-item">
                                 <strong>ID:</strong> {user.id}
                             </span>
+                        </div>
+
+                        {/* Credit Adjustment panel */}
+                        <div className="admin-adjust-panel">
+                            <h4>Admin Credit Adjustment</h4>
+                            <form className="admin-adjust-form" onSubmit={handleAdjust}>
+                                <input
+                                    className="admin-input"
+                                    type="number"
+                                    step="1"
+                                    placeholder="Amount (e.g. 100 or -50)"
+                                    style={{ width: '200px' }}
+                                    value={adjust.amount}
+                                    onChange={e => setAdjust(prev => ({ ...prev, amount: e.target.value }))}
+                                    disabled={adjust.submitting}
+                                />
+                                <input
+                                    className="admin-input"
+                                    type="text"
+                                    placeholder="Reason (required)"
+                                    style={{ flex: 1, minWidth: '200px' }}
+                                    value={adjust.reason}
+                                    onChange={e => setAdjust(prev => ({ ...prev, reason: e.target.value }))}
+                                    disabled={adjust.submitting}
+                                />
+                                <button
+                                    type="submit"
+                                    className="admin-btn-primary"
+                                    disabled={adjust.submitting}
+                                >
+                                    {adjust.submitting ? 'Applying…' : 'Apply Adjustment'}
+                                </button>
+                            </form>
+                            {adjust.success && <p className="admin-adjust-success">{adjust.success}</p>}
+                            {adjust.error   && <p className="admin-adjust-error">{adjust.error}</p>}
                         </div>
 
                         {/* Recent battles */}
@@ -122,7 +212,7 @@ const AdminUserDetail = () => {
                                         </thead>
                                         <tbody>
                                             {battles.map(b => {
-                                                const dateStr  = formatDate(b.completed_at || b.cancelled_at);
+                                                const dateStr   = formatDate(b.completed_at || b.cancelled_at);
                                                 const packLabel = b.pack_quantity > 1
                                                     ? `${b.pack_name} ×${b.pack_quantity}`
                                                     : b.pack_name;
@@ -167,7 +257,7 @@ const AdminUserDetail = () => {
                             )}
                         </div>
 
-                        {/* Recent transactions */}
+                        {/* Credit history */}
                         <div className="admin-section">
                             <h3 className="admin-section-title">Credit History</h3>
 

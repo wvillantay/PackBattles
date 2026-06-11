@@ -1283,6 +1283,85 @@ def admin_user_detail(user_id):
     })
 
 
+@app.route("/api/admin/users/<user_id>/adjust_credits", methods=["POST"])
+@require_admin
+def admin_adjust_credits(user_id):
+    # --- Input validation ---
+    try:
+        uid = ObjectId(user_id)
+    except Exception:
+        return jsonify({"error": "Invalid user ID"}), 404
+
+    admin_oid = ObjectId(g.user_id)
+    body      = request.get_json(silent=True) or {}
+
+    try:
+        amount = int(body.get("amount", 0))
+    except (TypeError, ValueError):
+        return jsonify({"error": "amount must be an integer"}), 400
+
+    if amount == 0:
+        return jsonify({"error": "amount must not be 0"}), 400
+
+    reason = str(body.get("reason", "")).strip()
+    if not reason:
+        return jsonify({"error": "reason is required"}), 400
+
+    # Pre-flight: confirm user exists and has enough credits for deductions
+    user = mongo.db.users.find_one({"_id": uid}, {"credits": 1, "name": 1})
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    if user.get("credits", 0) + amount < 0:
+        return jsonify({
+            "error": f"Insufficient credits. Current balance: {user.get('credits', 0)}"
+        }), 400
+
+    # --- Atomic credit update + ledger insert ---
+    # Requires a MongoDB replica set (Atlas M2+ or self-hosted replica set).
+    # If the transaction fails for any reason, both operations are rolled back.
+    try:
+        with mongo.db.client.start_session() as session:
+            with session.start_transaction():
+                updated = mongo.db.users.find_one_and_update(
+                    {"_id": uid},
+                    {"$inc": {"credits": amount}},
+                    return_document=True,
+                    session=session,
+                )
+                if updated is None:
+                    raise RuntimeError("user_not_found")
+
+                new_balance = updated["credits"]
+
+                mongo.db.credit_transactions.insert_one(
+                    {
+                        "user_id":       uid,
+                        "type":          "admin_credit_adjustment",
+                        "amount":        amount,
+                        "balance_after": new_balance,
+                        "note":          reason,
+                        "ref_type":      "admin",
+                        "ref_id":        admin_oid,
+                        "admin_id":      admin_oid,
+                        "created_at":    datetime.now(timezone.utc),
+                    },
+                    session=session,
+                )
+    except RuntimeError as exc:
+        if str(exc) == "user_not_found":
+            return jsonify({"error": "User not found"}), 404
+        return jsonify({"error": "Adjustment failed. No changes were made."}), 500
+    except Exception:
+        return jsonify({"error": "Adjustment failed. No changes were made."}), 500
+
+    return jsonify({
+        "ok":          True,
+        "new_balance": new_balance,
+        "user_name":   updated.get("name", ""),
+    })
+
+
 # ---------------------------------------------------------------------------
 # Health check
 # ---------------------------------------------------------------------------

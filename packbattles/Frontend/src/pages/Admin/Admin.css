@@ -3,6 +3,7 @@
 .admin-page {
     position: relative;
     padding: 6rem 0 8rem;
+    min-height: 100vh;
     isolation: isolate;
 }
 
@@ -357,6 +358,90 @@
     color: rgba(255, 255, 255, 0.45) !important;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
+}
+
+/* ---- Generic text input (shared by adjust form) ---- */
+
+.admin-input {
+    appearance: none;
+    background: rgba(33, 0, 75, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 1rem;
+    color: #fff;
+    font-size: 1.4rem;
+    font-family: inherit;
+    padding: 0.8rem 1.4rem;
+    outline: none;
+}
+
+.admin-input::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.admin-input:focus {
+    border-color: rgba(163, 91, 255, 0.5);
+}
+
+/* ---- Primary action button ---- */
+
+.admin-btn-primary {
+    display: inline-block;
+    padding: 0.85rem 2rem;
+    border-radius: 1rem;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(180deg, #A35BFF 0%, #811FFF 100%);
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+    white-space: nowrap;
+    font-family: inherit;
+}
+
+.admin-btn-primary:hover:not(:disabled) {
+    opacity: 0.85;
+}
+
+.admin-btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ---- Credit adjustment panel ---- */
+
+.admin-adjust-panel {
+    background: rgba(33, 0, 75, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 1.6rem;
+    padding: 2rem 2.4rem;
+    margin-bottom: 3.5rem;
+}
+
+.admin-adjust-panel h4 {
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: #fff;
+    margin: 0 0 1.4rem;
+}
+
+.admin-adjust-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: flex-end;
+}
+
+.admin-adjust-success {
+    color: #4ade80;
+    font-size: 1.4rem;
+    margin: 1rem 0 0;
+}
+
+.admin-adjust-error {
+    color: #f87171;
+    font-size: 1.4rem;
+    margin: 1rem 0 0;
 }
 
 /* ---- View button ---- */
