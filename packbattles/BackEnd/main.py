@@ -257,9 +257,20 @@ def open_pack(pack_id):
     if not pack:
         return jsonify({"error": "Pack not found"}), 404
 
-    user = mongo.db.users.find_one({"_id": ObjectId(g.user_id)})
-    if user["credits"] < pack["cost"]:
+    # Atomically deduct credits only if the user has enough.
+    # The filter {"credits": {"$gte": cost}} acts as the guard: if a parallel
+    # request already consumed the balance, this returns None and we 400.
+    # return_document=True gives the post-$inc value, so new_credits is exact.
+    updated = mongo.db.users.find_one_and_update(
+        {"_id": ObjectId(g.user_id), "credits": {"$gte": pack["cost"]}},
+        {"$inc": {"credits": -pack["cost"]}},
+        return_document=True,
+        projection={"credits": 1},
+    )
+    if updated is None:
         return jsonify({"error": "Insufficient credits"}), 400
+
+    new_credits = updated["credits"]
 
     pool        = pack["pool"]
     card_ids    = [e["card_id"] for e in pool]
@@ -267,11 +278,6 @@ def open_pack(pack_id):
     drawn_ids   = random.choices(card_ids, weights=weights, k=pack["cards_per_open"])
     drawn_cards = [mongo.db.cards.find_one({"_id": cid}) for cid in drawn_ids]
 
-    new_credits = user["credits"] - pack["cost"]
-    mongo.db.users.update_one(
-        {"_id": ObjectId(g.user_id)},
-        {"$set": {"credits": new_credits}},
-    )
     _log_tx(g.user_id, "pack_open_spend", -pack["cost"], new_credits,
             "pack", oid, f"Opened {pack['name']}")
 
