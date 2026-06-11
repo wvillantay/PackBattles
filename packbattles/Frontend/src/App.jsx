@@ -37,6 +37,7 @@ import Login from './pages/Login/Login'
 import SignUp from './pages/SignUp/SignUp'
 import AdminDashboard from './pages/Admin/AdminDashboard'
 import AdminUsers from './pages/Admin/AdminUsers'
+import AdminUserDetail from './pages/Admin/AdminUserDetail'
 import AdminBattles from './pages/Admin/AdminBattles'
 import AdminTransactions from './pages/Admin/AdminTransactions'
 
@@ -64,7 +65,8 @@ const App = () => {
 
         {/* Admin routes — require login + is_admin */}
         <Route path="/admin"              element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-        <Route path="/admin/users"        element={<AdminRoute><AdminUsers /></AdminRoute>} />
+        <Route path="/admin/users"         element={<AdminRoute><AdminUsers /></AdminRoute>} />
+        <Route path="/admin/users/:id"    element={<AdminRoute><AdminUserDetail /></AdminRoute>} />
         <Route path="/admin/battles"      element={<AdminRoute><AdminBattles /></AdminRoute>} />
         <Route path="/admin/transactions" element={<AdminRoute><AdminTransactions /></AdminRoute>} />
 

@@ -359,6 +359,134 @@
     white-space: nowrap;
 }
 
+/* ---- View button ---- */
+
+.admin-view-btn {
+    display: inline-block;
+    color: #fff;
+    font-size: 1.25rem;
+    font-weight: 500;
+    padding: 0.45rem 1.4rem;
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    text-decoration: none;
+    transition: background 0.2s ease;
+    white-space: nowrap;
+}
+
+.admin-view-btn:hover {
+    background: linear-gradient(180deg, #A35BFF 0%, #811FFF 100%);
+    color: #fff;
+}
+
+/* ---- User detail stat cards ---- */
+
+.admin-stat-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.6rem;
+    margin-bottom: 3rem;
+}
+
+.admin-stat-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 1.8rem 2.4rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 1.6rem;
+    background: rgba(33, 0, 75, 0.18);
+    backdrop-filter: blur(10px);
+    min-width: 120px;
+}
+
+.admin-stat-value {
+    font-size: 2.4rem;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1;
+}
+
+.admin-stat-credits {
+    background: linear-gradient(180deg, #A35BFF 0%, #811FFF 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.admin-stat-wins   { color: #4ade80; }
+.admin-stat-losses { color: #f87171; }
+
+.admin-stat-label {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.45);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.admin-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.2rem;
+    margin-bottom: 3.5rem;
+}
+
+.admin-meta-item {
+    font-size: 1.35rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.admin-meta-item strong {
+    color: rgba(255, 255, 255, 0.85);
+    font-weight: 500;
+}
+
+.admin-section-title {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #fff;
+    margin: 0 0 2rem;
+}
+
+.admin-section {
+    margin-top: 3.5rem;
+}
+
+/* ---- Result badge (reused on user detail battles) ---- */
+
+.admin-result-badge {
+    display: inline-block;
+    font-size: 1.1rem;
+    font-weight: 600;
+    padding: 0.25rem 0.9rem;
+    border-radius: 2rem;
+    letter-spacing: 0.04em;
+}
+
+.admin-result-win {
+    background: rgba(74, 222, 128, 0.12);
+    color: #4ade80;
+    border: 1px solid rgba(74, 222, 128, 0.25);
+}
+
+.admin-result-loss {
+    background: rgba(248, 113, 113, 0.12);
+    color: #f87171;
+    border: 1px solid rgba(248, 113, 113, 0.25);
+}
+
+.admin-result-cancelled {
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.38);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.admin-total {
+    font-variant-numeric: tabular-nums;
+}
+
 /* ---- Mobile ---- */
 
 @media (max-width: 767px) {

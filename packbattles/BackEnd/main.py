@@ -1154,6 +1154,135 @@ def admin_transactions():
     return jsonify(result)
 
 
+@app.route("/api/admin/users/<user_id>", methods=["GET"])
+@require_admin
+def admin_user_detail(user_id):
+    try:
+        uid = ObjectId(user_id)
+    except Exception:
+        return jsonify({"error": "Invalid user ID"}), 404
+
+    user = mongo.db.users.find_one({"_id": uid}, {"password_hash": 0})
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    # --- Battles (last 20, target user's perspective) ---
+    raw_battles = list(
+        mongo.db.battles.find(
+            {
+                "status": {"$in": ["completed", "cancelled"]},
+                "$or": [{"creator_id": uid}, {"opponent_id": uid}],
+            }
+        )
+        .sort("created_at", -1)
+        .limit(20)
+    )
+
+    # Batch-fetch packs
+    pack_ids  = list({b.get("pack_id") for b in raw_battles if b.get("pack_id")})
+    packs_map = {
+        str(p["_id"]): p.get("name", "Unknown Pack")
+        for p in mongo.db.packs.find({"_id": {"$in": pack_ids}}, {"name": 1})
+    }
+
+    # Batch-fetch opponent user names
+    other_ids = set()
+    for b in raw_battles:
+        if b.get("creator_id"):  other_ids.add(b["creator_id"])
+        if b.get("opponent_id"): other_ids.add(b["opponent_id"])
+    other_ids.discard(uid)
+    others_map = {
+        str(u["_id"]): u.get("name", "Unknown")
+        for u in mongo.db.users.find({"_id": {"$in": list(other_ids)}}, {"name": 1})
+    }
+
+    battles = []
+    for b in raw_battles:
+        pack_id    = b.get("pack_id")
+        pack_name  = packs_map.get(str(pack_id), "Unknown Pack") if pack_id else "Unknown Pack"
+        qty        = b.get("pack_quantity", 1)
+        status     = b.get("status", "unknown")
+        creator_id = b.get("creator_id")
+        is_creator = (creator_id == uid) if creator_id else False
+        is_bot     = b.get("is_bot_battle", False)
+
+        if status == "cancelled":
+            result_label  = "cancelled"
+            opponent_name = None
+            my_total      = None
+            their_total   = None
+        else:
+            if is_bot:
+                opponent_name = b.get("bot_name", "Bot")
+            elif is_creator:
+                opp_id        = b.get("opponent_id")
+                opponent_name = others_map.get(str(opp_id), "Unknown") if opp_id else "Unknown"
+            else:
+                opponent_name = others_map.get(str(creator_id), "Unknown") if creator_id else "Unknown"
+
+            winner_id    = b.get("winner_id")
+            result_label = "win" if (winner_id and winner_id == uid) else "loss"
+
+            if is_creator:
+                my_total    = b.get("creator_total")
+                their_total = b.get("opponent_total")
+            else:
+                my_total    = b.get("opponent_total")
+                their_total = b.get("creator_total")
+
+        battles.append({
+            "id":            str(b["_id"]),
+            "status":        status,
+            "pack_name":     pack_name,
+            "pack_quantity": qty,
+            "opponent_name": opponent_name,
+            "result":        result_label,
+            "my_total":      my_total,
+            "their_total":   their_total,
+            "is_bot_battle": is_bot,
+            "completed_at":  b["completed_at"].isoformat() if b.get("completed_at") else None,
+            "cancelled_at":  b["cancelled_at"].isoformat() if b.get("cancelled_at") else None,
+        })
+
+    # --- Transactions (last 30) ---
+    raw_tx = list(
+        mongo.db.credit_transactions.find(
+            {"user_id": uid},
+            {"user_id": 0},
+        )
+        .sort("created_at", -1)
+        .limit(30)
+    )
+
+    transactions = []
+    for tx in raw_tx:
+        transactions.append({
+            "id":            str(tx["_id"]),
+            "type":          tx.get("type", ""),
+            "note":          tx.get("note", ""),
+            "amount":        tx.get("amount"),
+            "balance_after": tx.get("balance_after"),
+            "ref_type":      tx.get("ref_type", ""),
+            "ref_id":        str(tx["ref_id"]) if tx.get("ref_id") else None,
+            "created_at":    tx["created_at"].isoformat() if tx.get("created_at") else None,
+        })
+
+    return jsonify({
+        "user": {
+            "id":         str(user["_id"]),
+            "name":       user.get("name", ""),
+            "email":      user.get("email", ""),
+            "credits":    user.get("credits", 0),
+            "wins":       user.get("wins", 0),
+            "losses":     user.get("losses", 0),
+            "is_admin":   user.get("is_admin", False) is True,
+            "created_at": user["created_at"].isoformat() if user.get("created_at") else None,
+        },
+        "battles":      battles,
+        "transactions": transactions,
+    })
+
+
 # ---------------------------------------------------------------------------
 # Health check
 # ---------------------------------------------------------------------------

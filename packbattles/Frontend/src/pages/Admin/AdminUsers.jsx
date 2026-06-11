@@ -69,6 +69,7 @@ const AdminUsers = () => {
                                     <th>WINS</th>
                                     <th>LOSSES</th>
                                     <th>JOINED</th>
+                                    <th></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -87,6 +88,11 @@ const AdminUsers = () => {
                                         <td><p className="admin-wins">{u.wins}</p></td>
                                         <td><p className="admin-losses">{u.losses}</p></td>
                                         <td><p>{formatDate(u.created_at)}</p></td>
+                                        <td>
+                                            <Link to={`/admin/users/${u.id}`} className="admin-view-btn">
+                                                View
+                                            </Link>
+                                        </td>
                                     </tr>
                                 ))}
                                 {filtered.length === 0 && (
