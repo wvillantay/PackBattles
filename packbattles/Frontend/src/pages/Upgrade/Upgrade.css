@@ -1,10 +1,11 @@
+/* ── Page wrapper & background (unchanged from mockup) ── */
+
 .upgrade {
     position: relative;
-    padding: 6rem 0;
+    padding: 6rem 0 8rem;
+    min-height: 100vh;
     isolation: isolate;
 }
-
-
 
 .upgrade .packs-bg {
     position: absolute;
@@ -14,18 +15,16 @@
     width: 100%;
     height: 100%;
     z-index: -1;
-
 }
 
-.upgrade .packs-bg:after {
+.upgrade .packs-bg::after {
     content: "";
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(rgb(8, 6, 32, .6), rgb(8, 6, 32, .6));
-
+    background: linear-gradient(rgba(8, 6, 32, 0.6), rgba(8, 6, 32, 0.6));
 }
 
 .upgrade .bg-img {
@@ -42,31 +41,44 @@
     background: linear-gradient(transparent, rgb(8, 6, 32) 90%);
 }
 
+/* ── Card slot (select-box, kept from mockup) ── */
 
 .upgrade .select-box {
     border-radius: 2rem;
     border: 1px dashed rgba(255, 255, 255, 0.30);
     background: rgba(33, 0, 75, 0.07);
-    box-shadow: 0px 20px 80px 0px rgba(7, 5, 35, 0.75);
+    box-shadow: 0 20px 80px 0 rgba(7, 5, 35, 0.75);
     backdrop-filter: blur(10px);
     text-align: center;
-    height: 400px;
+    height: 220px;
     max-width: 350px;
     margin: 1.5rem auto;
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.upgrade .select-box.select-box--filled {
+    border-style: solid;
+    border-color: rgba(163, 91, 255, 0.45);
+    background: rgba(33, 0, 75, 0.18);
 }
 
 .upgrade .select-box .box-content {
     max-width: 180px;
 }
 
-.upgrade .select-box .box-content .plus-icon {
+.upgrade .select-box .box-content p {
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 1.4rem;
+    margin: 0;
+}
+
+.upgrade .select-box .plus-icon {
     width: 60px;
     height: 60px;
     border-radius: 50%;
-    margin: 3rem auto;
+    margin: 0 auto 1.6rem;
     background: rgba(33, 0, 75, 0.07);
     border: 1px solid rgba(255, 255, 255, 0.15);
-    filter: drop-shadow(0px 20px 80px rgba(7, 5, 35, 0.75));
     backdrop-filter: blur(10px);
     display: flex;
     justify-content: center;
@@ -75,75 +87,483 @@
     color: #fff;
 }
 
+/* ── Panel labels ── */
 
-.upgrade .updrade-btns {
-    margin: 1.5rem auto;
-    display: flex;
-    gap: 10px;
-    max-width: 350px;
-
-}
-
-.upgrade .updrade-btns button {
-    all: unset;
-    display: block;
-    flex-basis: 50%;
-    border-radius: 40px;
-    border: 1px solid #432970;
-    background: rgba(163, 91, 255, 0.14);
-    box-shadow: 0px 4px 20px 0px rgba(163, 91, 255, 0.12) inset;
-    color: #FFF;
-    font-size: 1.6rem;
-    font-style: normal;
-    font-weight: 400;
+.up-panel-label {
     text-align: center;
-    box-sizing: border-box;
-    padding: .8rem 1rem;
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.35);
+    margin-bottom: 0;
+}
+
+/* ── Selected card display inside the slot ── */
+
+.up-selected-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1.6rem;
+}
+
+.up-selected-name {
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: #fff;
+    margin: 0;
+    text-align: center;
+}
+
+.up-selected-value {
+    font-size: 1.4rem;
+    color: #A35BFF;
+    font-weight: 600;
+    margin: 0;
+}
+
+.up-deselect {
+    all: unset;
+    font-size: 1.2rem;
+    color: rgba(255, 255, 255, 0.4);
     cursor: pointer;
-
+    margin-top: 0.4rem;
+    transition: color 0.15s ease;
 }
 
-.upgrade .updrade-btns button.btn-full {
-    min-width: 100% !important;
+.up-deselect:hover { color: rgba(255, 255, 255, 0.75); }
+
+/* ── Rarity labels ── */
+
+.up-rarity {
+    font-size: 1.1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
 }
 
-.u-x-btn button.active,
-.upgrade .updrade-btns button.active {
+.up-rarity-ultra_rare { color: #f59e0b; }
+.up-rarity-rare        { color: #A35BFF; }
+.up-rarity-uncommon    { color: #60a5fa; }
+.up-rarity-common      { color: rgba(255, 255, 255, 0.45); }
+
+/* ── Scrollable card list ── */
+
+.up-card-list {
+    max-width: 350px;
+    margin: 0.8rem auto 0;
+    max-height: 340px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding-right: 4px;
+}
+
+.up-card-list::-webkit-scrollbar        { width: 4px; }
+.up-card-list::-webkit-scrollbar-track  { background: transparent; }
+.up-card-list::-webkit-scrollbar-thumb  { background: rgba(163,91,255,0.3); border-radius: 2px; }
+
+.up-card-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.9rem 1.2rem;
+    border-radius: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(33, 0, 75, 0.12);
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+    gap: 0.8rem;
+}
+
+.up-card-item:hover {
+    border-color: rgba(163, 91, 255, 0.4);
+    background: rgba(33, 0, 75, 0.28);
+}
+
+.up-card-item--selected {
+    border-color: #A35BFF !important;
+    background: rgba(163, 91, 255, 0.18) !important;
+}
+
+.up-card-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+}
+
+.up-card-name {
+    font-size: 1.35rem;
+    font-weight: 500;
+    color: #fff;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.up-card-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.2rem;
+    flex-shrink: 0;
+}
+
+.up-card-value {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #A35BFF;
+    white-space: nowrap;
+}
+
+.up-qty {
+    font-size: 1.2rem;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.up-chance-tag {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #4ade80;
+    white-space: nowrap;
+}
+
+/* ── Center column ── */
+
+.up-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 420px;
+    padding-top: 3rem;
+    gap: 2rem;
+}
+
+/* ── Success chance ring meter ── */
+
+.up-meter {
+    position: relative;
+    width: 180px;
+    height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.up-meter-ring {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+    overflow: visible;
+}
+
+.up-meter-track {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.08);
+    stroke-width: 10;
+}
+
+.up-meter-fill {
+    fill: none;
+    stroke: url(#up-grad);
+    stroke-width: 10;
+    stroke-linecap: round;
+    transition: stroke-dasharray 0.4s ease;
+}
+
+.up-meter-text {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+}
+
+.up-chance-pct {
+    font-size: 3.2rem;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1;
+}
+
+.up-chance-label {
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.up-meter-empty {
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    border: 2px dashed rgba(255, 255, 255, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+}
+
+.up-meter-empty p {
+    font-size: 1.3rem;
+    color: rgba(255, 255, 255, 0.35);
+    text-align: center;
+    margin: 0;
+}
+
+/* ── Buttons ── */
+
+.up-btn-primary {
+    display: inline-block;
+    padding: 1rem 2.8rem;
+    border-radius: 4rem;
+    font-size: 1.6rem;
+    font-weight: 700;
     color: #fff;
     background: linear-gradient(180deg, #A35BFF 0%, #811FFF 100%);
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+    font-family: inherit;
+    white-space: nowrap;
 }
 
-.upgrade .u-cards {
-    max-width: 350px;
-    margin: auto;
+.up-btn-primary:hover:not(:disabled) { opacity: 0.85; }
+
+.up-btn-primary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
 }
 
-.upgrade .u-cards .u-card {
-    border-radius: 5px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    background: rgba(33, 0, 75, 0.07);
-    box-shadow: 0px 16px 65px 0px rgba(7, 5, 35, 0.75);
-    backdrop-filter: blur(8px);
-}
+.up-upgrade-btn { min-width: 160px; }
 
-
-.u-x-btn {
-    max-width: 350px;
-    display: flex;
-    gap: 10px;
-    margin: auto;
-
-}
-
-.u-x-btn button {
-    width: calc(100% / 5);
-    border-radius: 8px;
-    border: 1px solid #432970;
-    background: rgba(163, 91, 255, 0.14);
-    box-shadow: 0px 4px 20px 0px rgba(163, 91, 255, 0.12) inset;
-    padding: 1rem 1.2rem;
-    color: #FFF;
-    text-align: center;
+.up-btn-secondary {
+    display: inline-block;
+    padding: 1rem 2.8rem;
+    border-radius: 4rem;
     font-size: 1.6rem;
-    font-weight: 400;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    cursor: pointer;
+    transition: background 0.2s ease;
+    font-family: inherit;
+    white-space: nowrap;
+}
+
+.up-btn-secondary:hover { background: rgba(255, 255, 255, 0.14); }
+
+/* ── Hints & errors ── */
+
+.up-hint {
+    font-size: 1.3rem;
+    color: rgba(255, 255, 255, 0.4);
+    text-align: center;
+    margin: 0.6rem 0;
+}
+
+.up-hint--center { text-align: center; max-width: 240px; }
+.up-hint strong  { color: rgba(255, 255, 255, 0.75); }
+
+.up-error {
+    color: #f87171;
+    font-size: 1.4rem;
+    text-align: center;
+    margin: 0 auto 2rem;
+    max-width: 500px;
+}
+
+/* ── Result display ── */
+
+.up-result {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 3rem 2rem;
+    border-radius: 2rem;
+    border: 1px solid;
+    max-width: 280px;
+    text-align: center;
+}
+
+.up-result--success {
+    border-color: rgba(74, 222, 128, 0.35);
+    background: rgba(74, 222, 128, 0.06);
+}
+
+.up-result--fail {
+    border-color: rgba(248, 113, 113, 0.35);
+    background: rgba(248, 113, 113, 0.06);
+}
+
+.up-result-label {
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    margin: 0;
+}
+
+.up-result--success .up-result-label { color: #4ade80; }
+.up-result--fail    .up-result-label { color: #f87171; }
+
+.up-result-msg {
+    font-size: 1.3rem;
+    color: rgba(255, 255, 255, 0.5);
+    margin: 0;
+}
+
+.up-result-card {
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: #fff;
+    margin: 0;
+}
+
+.up-result-chance {
+    font-size: 1.2rem;
+    color: rgba(255, 255, 255, 0.35);
+    margin: 0.4rem 0 0.8rem;
+}
+
+/* ── Confirmation modal ── */
+
+.up-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 6, 32, 0.7);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.up-modal {
+    background: linear-gradient(135deg, rgba(33, 0, 75, 0.95), rgba(8, 6, 32, 0.98));
+    border: 1px solid rgba(163, 91, 255, 0.3);
+    border-radius: 2rem;
+    padding: 3rem 3.2rem;
+    max-width: 460px;
+    width: 90%;
+    display: flex;
+    flex-direction: column;
+    gap: 1.4rem;
+    box-shadow: 0 40px 80px rgba(7, 5, 35, 0.8);
+}
+
+.up-modal h3 {
+    font-size: 2.4rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+    text-align: center;
+}
+
+.up-modal-warn {
+    font-size: 1.4rem;
+    color: rgba(255, 255, 255, 0.5);
+    text-align: center;
+    margin: 0;
+}
+
+.up-modal-cards {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.6rem;
+    margin: 0.4rem 0;
+}
+
+.up-modal-side {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    flex: 1;
+}
+
+.up-modal-side-label {
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.35);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 0;
+}
+
+.up-modal-card-name {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #fff;
+    margin: 0;
+    text-align: center;
+}
+
+.up-modal-card-val {
+    font-size: 1.3rem;
+    color: #A35BFF;
+    font-weight: 600;
+    margin: 0;
+}
+
+.up-modal-arrow {
+    font-size: 2.4rem;
+    color: rgba(255, 255, 255, 0.3);
+    flex-shrink: 0;
+}
+
+.up-modal-chance {
+    font-size: 1.5rem;
+    color: rgba(255, 255, 255, 0.7);
+    text-align: center;
+    margin: 0;
+}
+
+.up-modal-chance strong { color: #fff; }
+
+.up-modal-note {
+    font-size: 1.3rem;
+    color: rgba(255, 255, 255, 0.35);
+    text-align: center;
+    margin: 0;
+}
+
+.up-modal-actions {
+    display: flex;
+    gap: 1.2rem;
+    justify-content: center;
+    margin-top: 0.4rem;
+}
+
+/* ── SVG gradient definition (inline defs won't work with external CSS,
+      so we use a solid color fallback and define the gradient in JSX) ── */
+
+/* ── Layout row spacing ── */
+
+.up-layout { align-items: flex-start; }
+
+/* ── Mobile ── */
+
+@media (max-width: 767px) {
+    .up-center { min-height: 300px; padding-top: 1rem; }
+
+    .up-modal { padding: 2.4rem 2rem; }
+
+    .up-modal-cards { flex-direction: column; gap: 0.8rem; }
+
+    .up-modal-arrow { transform: rotate(90deg); }
+
+    .up-modal-actions { flex-direction: column; }
+
+    .up-btn-primary,
+    .up-btn-secondary { width: 100%; text-align: center; }
+
+    .up-card-list { max-height: 220px; }
 }

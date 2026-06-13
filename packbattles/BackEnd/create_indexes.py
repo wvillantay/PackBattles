@@ -168,5 +168,12 @@ make_index(
     name="exchange_log_user_created",
 )
 
+# upgrade_log — queried by user and sorted by date
+make_index(
+    db.upgrade_log,
+    [("user_id", pymongo.ASCENDING), ("created_at", pymongo.DESCENDING)],
+    name="upgrade_log_user_created",
+)
+
 print("\nAll indexes created successfully.\n")
 client.close()

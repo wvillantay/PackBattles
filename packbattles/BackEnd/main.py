@@ -1246,6 +1246,231 @@ def exchange_confirm():
     })
 
 
+# ---------------------------------------------------------------------------
+# Upgrade routes
+# ---------------------------------------------------------------------------
+
+@app.route("/api/upgrade/targets", methods=["GET"])
+@require_auth
+def upgrade_targets():
+    """Return company_inventory cards the user can try to upgrade into."""
+    input_id_str = request.args.get("input_card_id", "").strip()
+    try:
+        input_oid = ObjectId(input_id_str)
+    except Exception:
+        return jsonify({"error": "Invalid card ID"}), 400
+
+    input_card = mongo.db.cards.find_one({"_id": input_oid})
+    if not input_card:
+        return jsonify({"error": "Card not found"}), 404
+
+    uid = ObjectId(g.user_id)
+    owns = mongo.db.inventory.find_one(
+        {"user_id": uid, "card_id": input_oid, "quantity": {"$gte": 1}}
+    )
+    if not owns:
+        return jsonify({"error": "You do not own this card"}), 400
+
+    input_value = float(input_card["value"])
+
+    avail_entries = list(mongo.db.company_inventory.find({
+        "$or": [
+            {"available_quantity": {"$gt": 0}},
+            {"fulfillable": True},
+        ]
+    }))
+
+    target_ids = [e["card_id"] for e in avail_entries if e["card_id"] != input_oid]
+    if not target_ids:
+        return jsonify([])
+
+    target_cards = list(mongo.db.cards.find({
+        "_id":   {"$in": target_ids},
+        "value": {"$gt": input_value},
+    }))
+
+    target_cards.sort(key=lambda c: float(c["value"]))
+
+    return jsonify([
+        {
+            "card_id":        str(c["_id"]),
+            "name":           c["name"],
+            "image_url":      c.get("image_url", ""),
+            "rarity":         c["rarity"],
+            "value":          float(c["value"]),
+            "success_chance": round(input_value / float(c["value"]), 4),
+        }
+        for c in target_cards
+    ])
+
+
+@app.route("/api/upgrade/confirm", methods=["POST"])
+@require_auth
+def upgrade_confirm():
+    data             = request.get_json(silent=True) or {}
+    input_id_str     = data.get("input_card_id", "")
+    target_id_str    = data.get("target_card_id", "")
+
+    try:
+        input_oid  = ObjectId(input_id_str)
+        target_oid = ObjectId(target_id_str)
+    except Exception:
+        return jsonify({"error": "Invalid card ID"}), 400
+
+    if input_oid == target_oid:
+        return jsonify({"error": "Input and target card cannot be the same"}), 400
+
+    uid = ObjectId(g.user_id)
+
+    input_card = mongo.db.cards.find_one({"_id": input_oid})
+    if not input_card:
+        return jsonify({"error": "Input card not found"}), 404
+
+    target_card = mongo.db.cards.find_one({"_id": target_oid})
+    if not target_card:
+        return jsonify({"error": "Target card not found"}), 404
+
+    input_value  = float(input_card["value"])
+    target_value = float(target_card["value"])
+
+    if target_value <= input_value:
+        return jsonify({"error": "Target card must be higher value than input card"}), 400
+
+    owns = mongo.db.inventory.find_one(
+        {"user_id": uid, "card_id": input_oid, "quantity": {"$gte": 1}}
+    )
+    if not owns:
+        return jsonify({"error": "You do not own this card"}), 400
+
+    company_rec = mongo.db.company_inventory.find_one({"card_id": target_oid})
+    if not company_rec:
+        return jsonify({"error": "Target card is not available for upgrade"}), 400
+    if company_rec.get("available_quantity", 0) <= 0 and not company_rec.get("fulfillable", False):
+        return jsonify({"error": "Target card is no longer in stock"}), 400
+
+    # Backend-only chance calculation — frontend never controls this
+    success_chance = input_value / target_value
+    succeeded      = random.random() < success_chance
+
+    now            = datetime.now(timezone.utc)
+    no_card        = False
+    target_unavail = False
+
+    try:
+        with mongo.db.client.start_session() as session:
+            with session.start_transaction():
+                # 1. Remove one copy of input card from user inventory
+                input_inv = mongo.db.inventory.find_one_and_update(
+                    {"user_id": uid, "card_id": input_oid, "quantity": {"$gte": 1}},
+                    {"$inc": {"quantity": -1}},
+                    return_document=True,
+                    session=session,
+                )
+                if input_inv is None:
+                    no_card = True
+                    raise RuntimeError("no_card")
+
+                # 2. Clean up zero-quantity row
+                if input_inv["quantity"] == 0:
+                    mongo.db.inventory.delete_one(
+                        {"_id": input_inv["_id"]},
+                        session=session,
+                    )
+
+                if succeeded:
+                    # 3a. Decrement company_inventory for target (if stock available)
+                    qty_update = mongo.db.company_inventory.find_one_and_update(
+                        {"card_id": target_oid, "available_quantity": {"$gt": 0}},
+                        {"$inc": {"available_quantity": -1}, "$set": {"updated_at": now}},
+                        return_document=True,
+                        session=session,
+                    )
+                    if qty_update is None:
+                        # Fall back to fulfillable
+                        fulfillable_rec = mongo.db.company_inventory.find_one(
+                            {"card_id": target_oid, "fulfillable": True},
+                            session=session,
+                        )
+                        if fulfillable_rec is None:
+                            target_unavail = True
+                            raise RuntimeError("target_unavail")
+
+                    # 3b. Add target card to user inventory
+                    mongo.db.inventory.update_one(
+                        {"user_id": uid, "card_id": target_oid},
+                        {
+                            "$inc":         {"quantity": 1},
+                            "$setOnInsert": {"acquired_at": now},
+                        },
+                        upsert=True,
+                        session=session,
+                    )
+
+                # 4. Increment company_inventory for input card (we now hold it)
+                mongo.db.company_inventory.update_one(
+                    {"card_id": input_oid},
+                    {
+                        "$inc":         {"available_quantity": 1},
+                        "$set":         {"updated_at": now},
+                        "$setOnInsert": {"fulfillable": False},
+                    },
+                    upsert=True,
+                    session=session,
+                )
+
+                # 5. Upgrade log — atomic with all inventory changes
+                mongo.db.upgrade_log.insert_one({
+                    "user_id":          uid,
+                    "input_card_id":    input_oid,
+                    "input_card_name":  input_card["name"],
+                    "input_value":      input_value,
+                    "target_card_id":   target_oid,
+                    "target_card_name": target_card["name"],
+                    "target_value":     target_value,
+                    "success_chance":   round(success_chance, 4),
+                    "result":           "success" if succeeded else "fail",
+                    "status":           "completed",
+                    "created_at":       now,
+                }, session=session)
+
+    except Exception:
+        if no_card:
+            return jsonify({"error": "You no longer own this card"}), 400
+        if target_unavail:
+            return jsonify({"error": "Target card is no longer available"}), 400
+        return jsonify({"error": "Upgrade failed. Please try again."}), 500
+
+    return jsonify({
+        "ok":              True,
+        "result":          "success" if succeeded else "fail",
+        "input_card_name": input_card["name"],
+        "target_card_name":target_card["name"],
+        "success_chance":  round(success_chance, 4),
+    })
+
+
+@app.route("/api/admin/upgrade-logs", methods=["GET"])
+@require_admin
+def admin_upgrade_logs():
+    limit = min(int(request.args.get("limit", 50)), 200)
+    raw   = list(mongo.db.upgrade_log.find({}).sort("created_at", -1).limit(limit))
+    result = []
+    for r in raw:
+        result.append({
+            "id":               str(r["_id"]),
+            "user_id":          str(r["user_id"]),
+            "input_card_name":  r.get("input_card_name"),
+            "input_value":      r.get("input_value"),
+            "target_card_name": r.get("target_card_name"),
+            "target_value":     r.get("target_value"),
+            "success_chance":   r.get("success_chance"),
+            "result":           r.get("result"),
+            "status":           r.get("status"),
+            "created_at":       r["created_at"].isoformat() if r.get("created_at") else None,
+        })
+    return jsonify(result)
+
+
 @app.route("/api/admin/exchange-logs", methods=["GET"])
 @require_admin
 def admin_exchange_logs():

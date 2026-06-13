@@ -76,7 +76,7 @@ const App = () => {
         {/* Static mockup pages — not yet wired, left unprotected for now */}
         <Route path="/events"                          element={<Events />} />
         <Route path="/event"                           element={<Event />} />
-        <Route path="/upgrade"                         element={<Upgrade />} />
+        <Route path="/upgrade"                         element={<ProtectedRoute><Upgrade /></ProtectedRoute>} />
         <Route path="/battle-popup"                    element={<BattlePopup />} />
         <Route path="/high-ball"                       element={<HighBall />} />
         <Route path="/dice-roll"                       element={<DiceRoll />} />
