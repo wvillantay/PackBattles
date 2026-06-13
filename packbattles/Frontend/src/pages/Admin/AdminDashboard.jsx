@@ -36,6 +36,11 @@ const AdminDashboard = () => {
                         <p>Full credit ledger for every user. Filter by category.</p>
                         <span className="admin-card-cta">View Transactions →</span>
                     </Link>
+                    <Link to="/admin/company-inventory" className="admin-card">
+                        <h3>Company Inventory</h3>
+                        <p>Set available quantity and fulfillable status for trade-in replacements.</p>
+                        <span className="admin-card-cta">Manage Inventory →</span>
+                    </Link>
                 </div>
             </div>
         </section>

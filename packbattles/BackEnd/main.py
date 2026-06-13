@@ -1720,6 +1720,40 @@ def admin_company_inventory_upsert():
     return jsonify({"ok": True, "card_id": str(card_oid), "card_name": card["name"]})
 
 
+@app.route("/api/admin/cards-with-inventory", methods=["GET"])
+@require_admin
+def admin_cards_with_inventory():
+    """All master cards left-joined with company_inventory — every card appears."""
+    all_cards = list(mongo.db.cards.find({}))
+
+    inv_entries = list(mongo.db.company_inventory.find({}))
+    inv_map = {str(e["card_id"]): e for e in inv_entries}
+
+    RARITY_ORDER = {"ultra_rare": 0, "rare": 1, "uncommon": 2, "common": 3}
+
+    result = []
+    for card in all_cards:
+        cid = str(card["_id"])
+        inv = inv_map.get(cid, {})
+        qty         = inv.get("available_quantity", 0)
+        fulfillable = inv.get("fulfillable", False)
+        result.append({
+            "card_id":            cid,
+            "card_name":          card.get("name", ""),
+            "card_rarity":        card.get("rarity", ""),
+            "card_value":         float(card.get("value", 0)),
+            "card_image_url":     card.get("image_url", ""),
+            "available_quantity": qty,
+            "fulfillable":        fulfillable,
+            "in_inventory":       cid in inv_map,
+            "trade_eligible":     qty > 0 or fulfillable,
+            "updated_at":         inv["updated_at"].isoformat() if inv.get("updated_at") else None,
+        })
+
+    result.sort(key=lambda x: (RARITY_ORDER.get(x["card_rarity"], 99), x["card_name"]))
+    return jsonify(result)
+
+
 # ---------------------------------------------------------------------------
 # Health check
 # ---------------------------------------------------------------------------

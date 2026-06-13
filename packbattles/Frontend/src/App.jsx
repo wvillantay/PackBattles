@@ -40,6 +40,7 @@ import AdminUsers from './pages/Admin/AdminUsers'
 import AdminUserDetail from './pages/Admin/AdminUserDetail'
 import AdminBattles from './pages/Admin/AdminBattles'
 import AdminTransactions from './pages/Admin/AdminTransactions'
+import AdminCompanyInventory from './pages/Admin/AdminCompanyInventory'
 
 const App = () => {
   useEffect(() => {
@@ -69,7 +70,8 @@ const App = () => {
         <Route path="/admin/users"         element={<AdminRoute><AdminUsers /></AdminRoute>} />
         <Route path="/admin/users/:id"    element={<AdminRoute><AdminUserDetail /></AdminRoute>} />
         <Route path="/admin/battles"      element={<AdminRoute><AdminBattles /></AdminRoute>} />
-        <Route path="/admin/transactions" element={<AdminRoute><AdminTransactions /></AdminRoute>} />
+        <Route path="/admin/transactions"       element={<AdminRoute><AdminTransactions /></AdminRoute>} />
+        <Route path="/admin/company-inventory" element={<AdminRoute><AdminCompanyInventory /></AdminRoute>} />
 
         {/* Static mockup pages — not yet wired, left unprotected for now */}
         <Route path="/events"                          element={<Events />} />

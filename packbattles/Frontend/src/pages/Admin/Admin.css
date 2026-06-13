@@ -574,6 +574,127 @@
     font-variant-numeric: tabular-nums;
 }
 
+/* ---- Company Inventory page ---- */
+
+.admin-ci-count {
+    color: rgba(255, 255, 255, 0.35);
+    font-size: 1.3rem;
+}
+
+.admin-ci-table {
+    width: 100%;
+}
+
+.admin-ci-card-cell {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.admin-ci-thumb {
+    width: 3.6rem;
+    height: 3.6rem;
+    object-fit: contain;
+    border-radius: 0.6rem;
+    flex-shrink: 0;
+}
+
+.admin-ci-name {
+    color: #fff !important;
+    font-weight: 500 !important;
+    white-space: nowrap;
+}
+
+.admin-ci-rarity {
+    font-size: 1.2rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+}
+
+.admin-ci-rarity-ultra_rare { color: #f59e0b !important; }
+.admin-ci-rarity-rare        { color: #A35BFF !important; }
+.admin-ci-rarity-uncommon    { color: #60a5fa !important; }
+.admin-ci-rarity-common      { color: rgba(255,255,255,0.45) !important; }
+
+.admin-ci-qty-input {
+    width: 7rem;
+    padding: 0.5rem 0.9rem;
+    font-size: 1.4rem;
+    text-align: center;
+}
+
+/* Fulfillable toggle switch */
+.admin-ci-toggle {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    gap: 0;
+    position: relative;
+}
+
+.admin-ci-toggle input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.admin-ci-toggle-track {
+    display: inline-block;
+    width: 3.8rem;
+    height: 2.2rem;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 2rem;
+    position: relative;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.admin-ci-toggle-track::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 3px;
+    transform: translateY(-50%);
+    width: 1.4rem;
+    height: 1.4rem;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.45);
+    transition: left 0.2s ease, background 0.2s ease;
+}
+
+.admin-ci-toggle input:checked + .admin-ci-toggle-track {
+    background: rgba(74, 222, 128, 0.25);
+    border-color: rgba(74, 222, 128, 0.5);
+}
+
+.admin-ci-toggle input:checked + .admin-ci-toggle-track::after {
+    left: calc(100% - 17px);
+    background: #4ade80;
+}
+
+.admin-ci-save-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    white-space: nowrap;
+}
+
+.admin-ci-save-btn {
+    padding: 0.5rem 1.4rem;
+    font-size: 1.3rem;
+}
+
+.admin-ci-feedback {
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.admin-ci-feedback-ok  { color: #4ade80; }
+.admin-ci-feedback-err { color: #f87171; }
+
 /* ---- Mobile ---- */
 
 @media (max-width: 767px) {
