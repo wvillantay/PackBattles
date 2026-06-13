@@ -62,6 +62,7 @@ const App = () => {
         <Route path="/battles"             element={<ProtectedRoute><Battles /></ProtectedRoute>} />
         <Route path="/duel-battle/:id"    element={<ProtectedRoute><DuelBattle /></ProtectedRoute>} />
         <Route path="/profile"            element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <Route path="/trade"              element={<ProtectedRoute><Trade /></ProtectedRoute>} />
 
         {/* Admin routes — require login + is_admin */}
         <Route path="/admin"              element={<AdminRoute><AdminDashboard /></AdminRoute>} />
@@ -74,7 +75,6 @@ const App = () => {
         <Route path="/events"                          element={<Events />} />
         <Route path="/event"                           element={<Event />} />
         <Route path="/upgrade"                         element={<Upgrade />} />
-        <Route path="/trade"                           element={<Trade />} />
         <Route path="/battle-popup"                    element={<BattlePopup />} />
         <Route path="/high-ball"                       element={<HighBall />} />
         <Route path="/dice-roll"                       element={<DiceRoll />} />

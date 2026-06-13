@@ -1058,6 +1058,217 @@ def my_transactions():
 
 
 # ---------------------------------------------------------------------------
+# Exchange routes
+# ---------------------------------------------------------------------------
+
+@app.route("/api/exchange/eligible", methods=["GET"])
+@require_auth
+def exchange_eligible():
+    offered_id_str = request.args.get("offered_card_id", "").strip()
+    try:
+        offered_oid = ObjectId(offered_id_str)
+    except Exception:
+        return jsonify({"error": "Invalid card ID"}), 400
+
+    offered_card = mongo.db.cards.find_one({"_id": offered_oid})
+    if not offered_card:
+        return jsonify({"error": "Card not found"}), 404
+
+    offered_value = float(offered_card["value"])
+
+    avail_entries = list(mongo.db.company_inventory.find({
+        "$or": [
+            {"available_quantity": {"$gt": 0}},
+            {"fulfillable": True},
+        ]
+    }))
+
+    eligible_card_ids = [
+        e["card_id"] for e in avail_entries if e["card_id"] != offered_oid
+    ]
+
+    if not eligible_card_ids:
+        return jsonify([])
+
+    eligible_cards = list(mongo.db.cards.find({
+        "_id":   {"$in": eligible_card_ids},
+        "value": {"$lte": offered_value},
+    }))
+
+    eligible_cards.sort(key=lambda c: float(c["value"]), reverse=True)
+
+    return jsonify([
+        {
+            "card_id":   str(c["_id"]),
+            "name":      c["name"],
+            "image_url": c["image_url"],
+            "rarity":    c["rarity"],
+            "value":     c["value"],
+        }
+        for c in eligible_cards
+    ])
+
+
+@app.route("/api/exchange/confirm", methods=["POST"])
+@require_auth
+def exchange_confirm():
+    data               = request.get_json(silent=True) or {}
+    offered_id_str     = data.get("offered_card_id", "")
+    replacement_id_str = data.get("replacement_card_id", "")
+
+    try:
+        offered_oid     = ObjectId(offered_id_str)
+        replacement_oid = ObjectId(replacement_id_str)
+    except Exception:
+        return jsonify({"error": "Invalid card ID"}), 400
+
+    if offered_oid == replacement_oid:
+        return jsonify({"error": "Cannot exchange a card for itself"}), 400
+
+    uid = ObjectId(g.user_id)
+
+    offered_card = mongo.db.cards.find_one({"_id": offered_oid})
+    if not offered_card:
+        return jsonify({"error": "Offered card not found"}), 404
+
+    replacement_card = mongo.db.cards.find_one({"_id": replacement_oid})
+    if not replacement_card:
+        return jsonify({"error": "Replacement card not found"}), 404
+
+    if float(replacement_card["value"]) > float(offered_card["value"]):
+        return jsonify({"error": "Replacement card value exceeds offered card value"}), 400
+
+    # Quick pre-checks (enforced atomically again inside the transaction)
+    user_inv = mongo.db.inventory.find_one(
+        {"user_id": uid, "card_id": offered_oid, "quantity": {"$gte": 1}}
+    )
+    if not user_inv:
+        return jsonify({"error": "You do not own this card"}), 400
+
+    company_rec = mongo.db.company_inventory.find_one({"card_id": replacement_oid})
+    if not company_rec:
+        return jsonify({"error": "This card is not available for exchange"}), 400
+    if company_rec.get("available_quantity", 0) <= 0 and not company_rec.get("fulfillable", False):
+        return jsonify({"error": "This card is no longer in stock"}), 400
+
+    now = datetime.now(timezone.utc)
+
+    no_card                 = False
+    card_unavailable        = False
+    company_qty_decremented = False
+    try:
+        with mongo.db.client.start_session() as session:
+            with session.start_transaction():
+                # 1. Remove one copy of offered card from user inventory
+                offered_inv = mongo.db.inventory.find_one_and_update(
+                    {"user_id": uid, "card_id": offered_oid, "quantity": {"$gte": 1}},
+                    {"$inc": {"quantity": -1}},
+                    return_document=True,
+                    session=session,
+                )
+                if offered_inv is None:
+                    no_card = True
+                    raise RuntimeError("no_card")
+
+                # 2. Clean up zero-quantity row
+                if offered_inv["quantity"] == 0:
+                    mongo.db.inventory.delete_one(
+                        {"_id": offered_inv["_id"]},
+                        session=session,
+                    )
+
+                # 3. Decrement company inventory for replacement if stock available
+                qty_update = mongo.db.company_inventory.find_one_and_update(
+                    {"card_id": replacement_oid, "available_quantity": {"$gt": 0}},
+                    {"$inc": {"available_quantity": -1}, "$set": {"updated_at": now}},
+                    return_document=True,
+                    session=session,
+                )
+                if qty_update is not None:
+                    company_qty_decremented = True
+                else:
+                    # Fall back to fulfillable (no quantity to decrement)
+                    fulfillable_rec = mongo.db.company_inventory.find_one(
+                        {"card_id": replacement_oid, "fulfillable": True},
+                        session=session,
+                    )
+                    if fulfillable_rec is None:
+                        card_unavailable = True
+                        raise RuntimeError("card_unavailable")
+
+                # 4. Add replacement card to user inventory
+                mongo.db.inventory.update_one(
+                    {"user_id": uid, "card_id": replacement_oid},
+                    {
+                        "$inc":         {"quantity": 1},
+                        "$setOnInsert": {"acquired_at": now},
+                    },
+                    upsert=True,
+                    session=session,
+                )
+
+                # 5. Increment company inventory for the offered card (we now own it)
+                mongo.db.company_inventory.update_one(
+                    {"card_id": offered_oid},
+                    {
+                        "$inc":         {"available_quantity": 1},
+                        "$set":         {"updated_at": now},
+                        "$setOnInsert": {"fulfillable": False},
+                    },
+                    upsert=True,
+                    session=session,
+                )
+
+                # 6. Exchange log inside the transaction — receipt and inventory swap are atomic
+                mongo.db.exchange_log.insert_one({
+                    "user_id":              uid,
+                    "offered_card_id":      offered_oid,
+                    "offered_card_name":    offered_card["name"],
+                    "offered_value":        float(offered_card["value"]),
+                    "received_card_id":     replacement_oid,
+                    "received_card_name":   replacement_card["name"],
+                    "received_value":       float(replacement_card["value"]),
+                    "status":               "completed",
+                    "created_at":           now,
+                }, session=session)
+
+    except Exception:
+        if no_card:
+            return jsonify({"error": "You no longer own this card"}), 400
+        if card_unavailable:
+            return jsonify({"error": "This card is no longer available for exchange"}), 400
+        return jsonify({"error": "Exchange failed. Please try again."}), 500
+
+    return jsonify({
+        "ok":             True,
+        "offered_card":   {"id": str(offered_oid),     "name": offered_card["name"]},
+        "replacement_card": {"id": str(replacement_oid), "name": replacement_card["name"]},
+    })
+
+
+@app.route("/api/admin/exchange-logs", methods=["GET"])
+@require_admin
+def admin_exchange_logs():
+    limit = min(int(request.args.get("limit", 50)), 200)
+    raw   = list(mongo.db.exchange_log.find({}).sort("created_at", -1).limit(limit))
+    result = []
+    for r in raw:
+        result.append({
+            "id":                str(r["_id"]),
+            "user_id":           str(r["user_id"]),
+            "offered_card_id":   str(r.get("offered_card_id", "")),
+            "offered_card_name": r.get("offered_card_name"),
+            "offered_value":     r.get("offered_value", r.get("offered_card_value")),
+            "received_card_id":  str(r.get("received_card_id") or r.get("replacement_card_id", "")),
+            "received_card_name":r.get("received_card_name", r.get("replacement_card_name")),
+            "received_value":    r.get("received_value", r.get("replacement_card_value")),
+            "status":            r.get("status", "completed"),
+            "created_at":        r["created_at"].isoformat() if r.get("created_at") else None,
+        })
+    return jsonify(result)
+
+
+# ---------------------------------------------------------------------------
 # Admin routes
 # ---------------------------------------------------------------------------
 
@@ -1416,6 +1627,97 @@ def admin_adjust_credits(user_id):
         "new_balance": new_balance,
         "user_name":   updated.get("name", ""),
     })
+
+
+# ---------------------------------------------------------------------------
+# Admin — company inventory management
+# ---------------------------------------------------------------------------
+
+@app.route("/api/admin/company-inventory", methods=["GET"])
+@require_admin
+def admin_company_inventory_list():
+    entries = list(mongo.db.company_inventory.find({}))
+
+    card_ids  = [e["card_id"] for e in entries]
+    cards_map = {
+        str(c["_id"]): c
+        for c in mongo.db.cards.find({"_id": {"$in": card_ids}})
+    }
+
+    RARITY_ORDER = {"ultra_rare": 0, "rare": 1, "uncommon": 2, "common": 3}
+
+    result = []
+    for e in entries:
+        card = cards_map.get(str(e["card_id"]))
+        result.append({
+            "card_id":            str(e["card_id"]),
+            "card_name":          card["name"]      if card else "Unknown",
+            "card_image_url":     card["image_url"] if card else "",
+            "card_rarity":        card["rarity"]    if card else "",
+            "card_value":         card["value"]     if card else 0,
+            "available_quantity": e.get("available_quantity", 0),
+            "fulfillable":        e.get("fulfillable", False),
+            "updated_at":         e["updated_at"].isoformat() if e.get("updated_at") else None,
+        })
+
+    result.sort(key=lambda x: (RARITY_ORDER.get(x["card_rarity"], 99), x["card_name"]))
+    return jsonify(result)
+
+
+@app.route("/api/admin/company-inventory", methods=["POST"])
+@require_admin
+def admin_company_inventory_upsert():
+    data        = request.get_json(silent=True) or {}
+    card_id_str = data.get("card_id", "")
+
+    try:
+        card_oid = ObjectId(card_id_str)
+    except Exception:
+        return jsonify({"error": "Invalid card_id"}), 400
+
+    card = mongo.db.cards.find_one({"_id": card_oid})
+    if not card:
+        return jsonify({"error": "Card not found"}), 404
+
+    available_quantity = data.get("available_quantity")
+    fulfillable        = data.get("fulfillable")
+
+    if available_quantity is None and fulfillable is None:
+        return jsonify({"error": "Provide available_quantity and/or fulfillable"}), 400
+
+    now        = datetime.now(timezone.utc)
+    set_fields = {"updated_at": now}
+
+    if available_quantity is not None:
+        try:
+            available_quantity = int(available_quantity)
+        except (TypeError, ValueError):
+            return jsonify({"error": "available_quantity must be an integer"}), 400
+        if available_quantity < 0:
+            return jsonify({"error": "available_quantity cannot be negative"}), 400
+        set_fields["available_quantity"] = available_quantity
+
+    if fulfillable is not None:
+        set_fields["fulfillable"] = bool(fulfillable)
+
+    # $setOnInsert provides defaults for fields not in $set, applied only on first insert
+    setOnInsert_fields = {}
+    if "available_quantity" not in set_fields:
+        setOnInsert_fields["available_quantity"] = 0
+    if "fulfillable" not in set_fields:
+        setOnInsert_fields["fulfillable"] = False
+
+    update_doc = {"$set": set_fields}
+    if setOnInsert_fields:
+        update_doc["$setOnInsert"] = setOnInsert_fields
+
+    mongo.db.company_inventory.update_one(
+        {"card_id": card_oid},
+        update_doc,
+        upsert=True,
+    )
+
+    return jsonify({"ok": True, "card_id": str(card_oid), "card_name": card["name"]})
 
 
 # ---------------------------------------------------------------------------

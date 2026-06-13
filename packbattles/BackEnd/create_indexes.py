@@ -153,5 +153,20 @@ make_index(
     name="txns_user_created",
 )
 
+# company_inventory — one record per card; used by exchange eligible lookup and confirm
+make_index(
+    db.company_inventory,
+    [("card_id", pymongo.ASCENDING)],
+    name="company_inv_card_id_unique",
+    unique=True,
+)
+
+# exchange_log — queried by user and sorted by date
+make_index(
+    db.exchange_log,
+    [("user_id", pymongo.ASCENDING), ("created_at", pymongo.DESCENDING)],
+    name="exchange_log_user_created",
+)
+
 print("\nAll indexes created successfully.\n")
 client.close()
