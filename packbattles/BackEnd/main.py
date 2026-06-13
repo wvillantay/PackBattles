@@ -1,5 +1,7 @@
+import hashlib
 import os
 import random
+import secrets
 from datetime import datetime, timedelta, timezone
 from functools import wraps
 
@@ -1304,12 +1306,13 @@ def upgrade_targets():
     ])
 
 
-@app.route("/api/upgrade/confirm", methods=["POST"])
+@app.route("/api/upgrade/init", methods=["POST"])
 @require_auth
-def upgrade_confirm():
-    data             = request.get_json(silent=True) or {}
-    input_id_str     = data.get("input_card_id", "")
-    target_id_str    = data.get("target_card_id", "")
+def upgrade_init():
+    data           = request.get_json(silent=True) or {}
+    input_id_str   = data.get("input_card_id", "")
+    target_id_str  = data.get("target_card_id", "")
+    client_seed_in = str(data.get("client_seed", "")).strip()[:128]
 
     try:
         input_oid  = ObjectId(input_id_str)
@@ -1348,11 +1351,115 @@ def upgrade_confirm():
     if company_rec.get("available_quantity", 0) <= 0 and not company_rec.get("fulfillable", False):
         return jsonify({"error": "Target card is no longer in stock"}), 400
 
-    # Backend-only chance calculation — frontend never controls this
-    success_chance = input_value / target_value
-    succeeded      = random.random() < success_chance
+    # Generate commit seeds
+    server_seed      = secrets.token_hex(32)
+    server_seed_hash = hashlib.sha256(server_seed.encode()).hexdigest()
+    client_seed      = client_seed_in if client_seed_in else secrets.token_hex(16)
+    nonce            = mongo.db.upgrade_log.count_documents({"user_id": uid})
 
-    now            = datetime.now(timezone.utc)
+    now        = datetime.now(timezone.utc)
+    expires_at = now + timedelta(minutes=30)
+
+    result = mongo.db.upgrade_pending.insert_one({
+        "user_id":          uid,
+        "input_card_id":    input_oid,
+        "target_card_id":   target_oid,
+        "server_seed":      server_seed,
+        "server_seed_hash": server_seed_hash,
+        "client_seed":      client_seed,
+        "nonce":            nonce,
+        "status":           "pending",
+        "created_at":       now,
+        "expires_at":       expires_at,
+    })
+
+    return jsonify({
+        "pending_id":       str(result.inserted_id),
+        "server_seed_hash": server_seed_hash,
+        "client_seed":      client_seed,
+        "nonce":            nonce,
+        "success_chance":   round(input_value / target_value, 4),
+        "input_card_name":  input_card["name"],
+        "target_card_name": target_card["name"],
+        "input_value":      input_value,
+        "target_value":     target_value,
+        "expires_at":       expires_at.isoformat(),
+    })
+
+
+@app.route("/api/upgrade/confirm", methods=["POST"])
+@require_auth
+def upgrade_confirm():
+    data           = request.get_json(silent=True) or {}
+    pending_id_str = data.get("pending_id", "")
+
+    try:
+        pending_oid = ObjectId(pending_id_str)
+    except Exception:
+        return jsonify({"error": "Invalid pending ID"}), 400
+
+    uid     = ObjectId(g.user_id)
+    pending = mongo.db.upgrade_pending.find_one({"_id": pending_oid})
+    if not pending:
+        return jsonify({"error": "Upgrade session not found"}), 404
+    if pending["user_id"] != uid:
+        return jsonify({"error": "Unauthorized"}), 403
+    if pending["status"] != "pending":
+        return jsonify({"error": "Upgrade already completed or expired"}), 400
+
+    now        = datetime.now(timezone.utc)
+    expires_at = pending["expires_at"]
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if expires_at < now:
+        mongo.db.upgrade_pending.update_one(
+            {"_id": pending_oid}, {"$set": {"status": "expired"}}
+        )
+        return jsonify({"error": "Upgrade session has expired. Please start a new upgrade."}), 400
+
+    server_seed      = pending["server_seed"]
+    server_seed_hash = pending["server_seed_hash"]
+    client_seed      = pending["client_seed"]
+    nonce            = pending["nonce"]
+    input_oid        = pending["input_card_id"]
+    target_oid       = pending["target_card_id"]
+
+    # Re-validate all conditions at confirm time
+    if input_oid == target_oid:
+        return jsonify({"error": "Input and target card cannot be the same"}), 400
+
+    input_card = mongo.db.cards.find_one({"_id": input_oid})
+    if not input_card:
+        return jsonify({"error": "Input card not found"}), 404
+
+    target_card = mongo.db.cards.find_one({"_id": target_oid})
+    if not target_card:
+        return jsonify({"error": "Target card not found"}), 404
+
+    input_value  = float(input_card["value"])
+    target_value = float(target_card["value"])
+
+    if target_value <= input_value:
+        return jsonify({"error": "Target card must be higher value than input card"}), 400
+
+    owns = mongo.db.inventory.find_one(
+        {"user_id": uid, "card_id": input_oid, "quantity": {"$gte": 1}}
+    )
+    if not owns:
+        return jsonify({"error": "You do not own this card"}), 400
+
+    company_rec = mongo.db.company_inventory.find_one({"card_id": target_oid})
+    if not company_rec:
+        return jsonify({"error": "Target card is not available for upgrade"}), 400
+    if company_rec.get("available_quantity", 0) <= 0 and not company_rec.get("fulfillable", False):
+        return jsonify({"error": "Target card is no longer in stock"}), 400
+
+    # Commit-reveal roll — frontend never controls odds
+    digest         = hashlib.sha256(f"{server_seed}:{client_seed}:{nonce}".encode()).hexdigest()
+    roll           = int(digest[:8], 16) / 0x100000000
+    success_chance = input_value / target_value
+    succeeded      = roll < success_chance
+
     no_card        = False
     target_unavail = False
 
@@ -1373,12 +1480,11 @@ def upgrade_confirm():
                 # 2. Clean up zero-quantity row
                 if input_inv["quantity"] == 0:
                     mongo.db.inventory.delete_one(
-                        {"_id": input_inv["_id"]},
-                        session=session,
+                        {"_id": input_inv["_id"]}, session=session
                     )
 
                 if succeeded:
-                    # 3a. Decrement company_inventory for target (if stock available)
+                    # 3a. Decrement company_inventory for target
                     qty_update = mongo.db.company_inventory.find_one_and_update(
                         {"card_id": target_oid, "available_quantity": {"$gt": 0}},
                         {"$inc": {"available_quantity": -1}, "$set": {"updated_at": now}},
@@ -1386,7 +1492,6 @@ def upgrade_confirm():
                         session=session,
                     )
                     if qty_update is None:
-                        # Fall back to fulfillable
                         fulfillable_rec = mongo.db.company_inventory.find_one(
                             {"card_id": target_oid, "fulfillable": True},
                             session=session,
@@ -1406,7 +1511,7 @@ def upgrade_confirm():
                         session=session,
                     )
 
-                # 4. Increment company_inventory for input card (we now hold it)
+                # 4. Return input card to company inventory
                 mongo.db.company_inventory.update_one(
                     {"card_id": input_oid},
                     {
@@ -1418,20 +1523,28 @@ def upgrade_confirm():
                     session=session,
                 )
 
-                # 5. Upgrade log — atomic with all inventory changes
+                # 5. Upgrade log with provably fair fields — atomic with inventory
                 mongo.db.upgrade_log.insert_one({
-                    "user_id":          uid,
-                    "input_card_id":    input_oid,
-                    "input_card_name":  input_card["name"],
-                    "input_value":      input_value,
-                    "target_card_id":   target_oid,
-                    "target_card_name": target_card["name"],
-                    "target_value":     target_value,
-                    "success_chance":   round(success_chance, 4),
-                    "result":           "success" if succeeded else "fail",
-                    "status":           "completed",
-                    "created_at":       now,
+                    "user_id":           uid,
+                    "input_card_id":     input_oid,
+                    "input_card_name":   input_card["name"],
+                    "input_value":       input_value,
+                    "target_card_id":    target_oid,
+                    "target_card_name":  target_card["name"],
+                    "target_value":      target_value,
+                    "success_chance":    round(success_chance, 4),
+                    "result":            "success" if succeeded else "fail",
+                    "status":            "completed",
+                    "server_seed":       server_seed,
+                    "server_seed_hash":  server_seed_hash,
+                    "client_seed":       client_seed,
+                    "nonce":             nonce,
+                    "roll":              round(roll, 8),
+                    "created_at":        now,
                 }, session=session)
+
+                # 6. Delete the pending record
+                mongo.db.upgrade_pending.delete_one({"_id": pending_oid}, session=session)
 
     except Exception:
         if no_card:
@@ -1441,11 +1554,16 @@ def upgrade_confirm():
         return jsonify({"error": "Upgrade failed. Please try again."}), 500
 
     return jsonify({
-        "ok":              True,
-        "result":          "success" if succeeded else "fail",
-        "input_card_name": input_card["name"],
-        "target_card_name":target_card["name"],
-        "success_chance":  round(success_chance, 4),
+        "ok":               True,
+        "result":           "success" if succeeded else "fail",
+        "input_card_name":  input_card["name"],
+        "target_card_name": target_card["name"],
+        "success_chance":   round(success_chance, 4),
+        "roll":             round(roll, 8),
+        "server_seed":      server_seed,
+        "server_seed_hash": server_seed_hash,
+        "client_seed":      client_seed,
+        "nonce":            nonce,
     })
 
 
@@ -1466,6 +1584,11 @@ def admin_upgrade_logs():
             "success_chance":   r.get("success_chance"),
             "result":           r.get("result"),
             "status":           r.get("status"),
+            "server_seed":      r.get("server_seed"),
+            "server_seed_hash": r.get("server_seed_hash"),
+            "client_seed":      r.get("client_seed"),
+            "nonce":            r.get("nonce"),
+            "roll":             r.get("roll"),
             "created_at":       r["created_at"].isoformat() if r.get("created_at") else None,
         })
     return jsonify(result)

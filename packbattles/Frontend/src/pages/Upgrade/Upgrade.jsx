@@ -16,18 +16,19 @@ const RARITY_LABEL = {
 const Upgrade = () => {
     const { token } = useAuth();
 
-    const [inventory,    setInventory]    = useState([]);
-    const [targets,      setTargets]      = useState([]);
-    const [inputCard,    setInputCard]    = useState(null);
-    const [targetCard,   setTargetCard]   = useState(null);
-    const [loadingInv,   setLoadingInv]   = useState(true);
-    const [loadingTgts,  setLoadingTgts]  = useState(false);
-    const [confirming,   setConfirming]   = useState(false);
-    const [showModal,    setShowModal]    = useState(false);
-    const [result,       setResult]       = useState(null); // { ok, result, input_card_name, target_card_name, success_chance }
-    const [error,        setError]        = useState('');
+    const [inventory,       setInventory]       = useState([]);
+    const [targets,         setTargets]         = useState([]);
+    const [inputCard,       setInputCard]       = useState(null);
+    const [targetCard,      setTargetCard]      = useState(null);
+    const [loadingInv,      setLoadingInv]      = useState(true);
+    const [loadingTgts,     setLoadingTgts]     = useState(false);
+    const [initiating,      setInitiating]      = useState(false);
+    const [confirming,      setConfirming]      = useState(false);
+    const [pendingData,     setPendingData]     = useState(null);
+    const [clientSeedInput, setClientSeedInput] = useState('');
+    const [result,          setResult]          = useState(null);
+    const [error,           setError]           = useState('');
 
-    // Load user inventory on mount
     useEffect(() => {
         setLoadingInv(true);
         axios
@@ -37,7 +38,6 @@ const Upgrade = () => {
             .finally(() => setLoadingInv(false));
     }, [token]);
 
-    // Load eligible targets whenever input card changes
     useEffect(() => {
         if (!inputCard) { setTargets([]); setTargetCard(null); return; }
         setLoadingTgts(true);
@@ -53,7 +53,7 @@ const Upgrade = () => {
     }, [inputCard, token]);
 
     const selectInput = useCallback((card) => {
-        if (result) return; // locked after result
+        if (result) return;
         setInputCard(prev => prev?.card_id === card.card_id ? null : card);
         setError('');
         setResult(null);
@@ -69,24 +69,51 @@ const Upgrade = () => {
         ? inputCard.value / targetCard.value
         : null;
 
-    const handleUpgradeClick = () => {
-        if (!inputCard || !targetCard || confirming) return;
-        setShowModal(true);
+    const chancePercent = successChance !== null
+        ? Math.round(successChance * 100)
+        : null;
+
+    // Step 1: POST /api/upgrade/init — commit phase
+    const handleUpgradeClick = async () => {
+        if (!inputCard || !targetCard || initiating || confirming) return;
+        setInitiating(true);
+        setError('');
+        try {
+            const body = {
+                input_card_id:  inputCard.card_id,
+                target_card_id: targetCard.card_id,
+            };
+            if (clientSeedInput.trim()) {
+                body.client_seed = clientSeedInput.trim();
+            }
+            const res = await axios.post(
+                `${API}/api/upgrade/init`,
+                body,
+                { headers: { Authorization: `Bearer ${token}` } },
+            );
+            setPendingData(res.data);
+        } catch (err) {
+            const msg = err.response?.data?.error || 'Failed to initiate upgrade. Please try again.';
+            setError(msg);
+        } finally {
+            setInitiating(false);
+        }
     };
 
+    // Step 2: POST /api/upgrade/confirm — reveal + execute phase
     const handleConfirm = async () => {
-        if (!inputCard || !targetCard) return;
-        setShowModal(false);
+        if (!pendingData || confirming) return;
+        const snap = pendingData;
+        setPendingData(null);
         setConfirming(true);
         setError('');
         try {
             const res = await axios.post(
                 `${API}/api/upgrade/confirm`,
-                { input_card_id: inputCard.card_id, target_card_id: targetCard.card_id },
+                { pending_id: snap.pending_id },
                 { headers: { Authorization: `Bearer ${token}` } },
             );
             setResult(res.data);
-            // Refresh inventory so quantities are accurate
             const inv = await axios.get(`${API}/api/inventory`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
@@ -104,12 +131,10 @@ const Upgrade = () => {
         setTargetCard(null);
         setTargets([]);
         setResult(null);
+        setPendingData(null);
+        setClientSeedInput('');
         setError('');
     };
-
-    const chancePercent = successChance !== null
-        ? Math.round(successChance * 100)
-        : null;
 
     return (
         <>
@@ -131,7 +156,6 @@ const Upgrade = () => {
                         <div className="col-md-4">
                             <p className="up-panel-label">YOUR CARD</p>
 
-                            {/* Selected slot */}
                             <div className={`select-box d-flex justify-content-center align-items-center ${inputCard ? 'select-box--filled' : ''}`}>
                                 {inputCard ? (
                                     <div className="up-selected-card">
@@ -154,7 +178,6 @@ const Upgrade = () => {
                                 )}
                             </div>
 
-                            {/* Inventory list */}
                             {!result && (
                                 <div className="up-card-list">
                                     {loadingInv && <p className="up-hint">Loading inventory…</p>}
@@ -189,7 +212,6 @@ const Upgrade = () => {
                         <div className="col-md-4 text-center">
                             <div className="up-center">
                                 {result ? (
-                                    /* Result overlay */
                                     <div className={`up-result up-result--${result.result}`}>
                                         <p className="up-result-label">
                                             {result.result === 'success' ? 'SUCCESS' : 'FAILED'}
@@ -207,14 +229,39 @@ const Upgrade = () => {
                                         )}
                                         <p className="up-result-chance">
                                             Chance was {Math.round(result.success_chance * 100)}%
+                                            &nbsp;·&nbsp; Roll: {result.roll?.toFixed(8)}
                                         </p>
+
+                                        {/* Provably fair verification */}
+                                        <div className="up-seed-section">
+                                            <p className="up-seed-title">Provably Fair Verification</p>
+                                            <div className="up-seed-row">
+                                                <span className="up-seed-label">Server Seed</span>
+                                                <span className="up-seed-value up-seed-mono">{result.server_seed}</span>
+                                            </div>
+                                            <div className="up-seed-row">
+                                                <span className="up-seed-label">Server Hash</span>
+                                                <span className="up-seed-value up-seed-mono">{result.server_seed_hash}</span>
+                                            </div>
+                                            <div className="up-seed-row">
+                                                <span className="up-seed-label">Client Seed</span>
+                                                <span className="up-seed-value up-seed-mono">{result.client_seed}</span>
+                                            </div>
+                                            <div className="up-seed-row">
+                                                <span className="up-seed-label">Nonce</span>
+                                                <span className="up-seed-value">{result.nonce}</span>
+                                            </div>
+                                            <p className="up-seed-formula">
+                                                SHA256(server_seed:client_seed:nonce)[:8] / 0x100000000
+                                            </p>
+                                        </div>
+
                                         <button className="up-btn-primary" onClick={handleReset}>
                                             Try Again
                                         </button>
                                     </div>
                                 ) : (
                                     <>
-                                        {/* Chance meter */}
                                         <div className="up-meter">
                                             {chancePercent !== null ? (
                                                 <>
@@ -245,12 +292,29 @@ const Upgrade = () => {
                                             )}
                                         </div>
 
+                                        {inputCard && targetCard && (
+                                            <div className="up-client-seed-wrap">
+                                                <label className="up-client-seed-label" htmlFor="up-client-seed">
+                                                    Client seed <span>(optional)</span>
+                                                </label>
+                                                <input
+                                                    id="up-client-seed"
+                                                    className="up-client-seed-input"
+                                                    type="text"
+                                                    placeholder="auto-generated"
+                                                    maxLength={128}
+                                                    value={clientSeedInput}
+                                                    onChange={e => setClientSeedInput(e.target.value)}
+                                                />
+                                            </div>
+                                        )}
+
                                         <button
                                             className="up-btn-primary up-upgrade-btn"
-                                            disabled={!inputCard || !targetCard || confirming}
+                                            disabled={!inputCard || !targetCard || initiating || confirming}
                                             onClick={handleUpgradeClick}
                                         >
-                                            {confirming ? 'Upgrading…' : 'Upgrade'}
+                                            {initiating ? 'Preparing…' : confirming ? 'Upgrading…' : 'Upgrade'}
                                         </button>
                                         {inputCard && targetCard && (
                                             <p className="up-hint up-hint--center">
@@ -266,7 +330,6 @@ const Upgrade = () => {
                         <div className="col-md-4">
                             <p className="up-panel-label">TARGET CARD</p>
 
-                            {/* Selected slot */}
                             <div className={`select-box d-flex justify-content-center align-items-center ${targetCard ? 'select-box--filled' : ''}`}>
                                 {targetCard ? (
                                     <div className="up-selected-card">
@@ -289,7 +352,6 @@ const Upgrade = () => {
                                 )}
                             </div>
 
-                            {/* Target list */}
                             {!result && inputCard && (
                                 <div className="up-card-list">
                                     {loadingTgts && <p className="up-hint">Loading targets…</p>}
@@ -324,33 +386,46 @@ const Upgrade = () => {
                 </div>
             </section>
 
-            {/* Confirmation modal */}
-            {showModal && inputCard && targetCard && (
-                <div className="up-modal-overlay" onClick={() => setShowModal(false)}>
+            {/* Confirmation modal — shown after /init succeeds */}
+            {pendingData && (
+                <div className="up-modal-overlay" onClick={() => setPendingData(null)}>
                     <div className="up-modal" onClick={e => e.stopPropagation()}>
                         <h3>Confirm Upgrade</h3>
                         <p className="up-modal-warn">This upgrade cannot be undone.</p>
                         <div className="up-modal-cards">
                             <div className="up-modal-side">
                                 <p className="up-modal-side-label">You risk</p>
-                                <p className="up-modal-card-name">{inputCard.name}</p>
-                                <p className="up-modal-card-val">${inputCard.value.toFixed(2)}</p>
+                                <p className="up-modal-card-name">{pendingData.input_card_name}</p>
+                                <p className="up-modal-card-val">${pendingData.input_value?.toFixed(2)}</p>
                             </div>
                             <div className="up-modal-arrow">→</div>
                             <div className="up-modal-side">
                                 <p className="up-modal-side-label">Target</p>
-                                <p className="up-modal-card-name">{targetCard.name}</p>
-                                <p className="up-modal-card-val">${targetCard.value.toFixed(2)}</p>
+                                <p className="up-modal-card-name">{pendingData.target_card_name}</p>
+                                <p className="up-modal-card-val">${pendingData.target_value?.toFixed(2)}</p>
                             </div>
                         </div>
                         <p className="up-modal-chance">
-                            Success chance: <strong>{chancePercent}%</strong>
+                            Success chance: <strong>{Math.round(pendingData.success_chance * 100)}%</strong>
                         </p>
-                        <p className="up-modal-note">
-                            Your card is removed win or lose.
-                        </p>
+
+                        {/* Provably fair hash commitment */}
+                        <div className="up-modal-hash-wrap">
+                            <p className="up-modal-hash-label">Server Seed Hash (SHA256)</p>
+                            <p className="up-modal-hash-value">{pendingData.server_seed_hash}</p>
+                            <p className="up-modal-hash-note">
+                                The server pre-committed to this outcome before you confirmed.
+                            </p>
+                            <p className="up-modal-hash-sub">
+                                Client seed:&nbsp;
+                                <span className="up-mono">{pendingData.client_seed}</span>
+                                &nbsp;·&nbsp;Nonce: {pendingData.nonce}
+                            </p>
+                        </div>
+
+                        <p className="up-modal-note">Your card is removed win or lose.</p>
                         <div className="up-modal-actions">
-                            <button className="up-btn-secondary" onClick={() => setShowModal(false)}>
+                            <button className="up-btn-secondary" onClick={() => setPendingData(null)}>
                                 Cancel
                             </button>
                             <button className="up-btn-primary" onClick={handleConfirm}>

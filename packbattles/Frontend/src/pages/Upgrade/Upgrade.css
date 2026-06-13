@@ -542,6 +542,144 @@
     margin-top: 0.4rem;
 }
 
+/* ── Client seed input ── */
+
+.up-client-seed-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    width: 100%;
+    max-width: 260px;
+}
+
+.up-client-seed-label {
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 0;
+}
+
+.up-client-seed-label span {
+    text-transform: none;
+    font-weight: 400;
+    opacity: 0.7;
+}
+
+.up-client-seed-input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 0.6rem;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 1.2rem;
+    font-family: monospace;
+    padding: 0.5rem 0.8rem;
+    outline: none;
+    transition: border-color 0.15s ease;
+}
+
+.up-client-seed-input::placeholder { color: rgba(255, 255, 255, 0.2); }
+.up-client-seed-input:focus { border-color: rgba(163, 91, 255, 0.45); }
+
+/* ── Provably fair result section ── */
+
+.up-seed-section {
+    width: 100%;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    margin-top: 0.8rem;
+    padding-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    text-align: left;
+}
+
+.up-seed-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(255, 255, 255, 0.3);
+    margin: 0 0 0.2rem;
+    text-align: center;
+}
+
+.up-seed-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.up-seed-label {
+    font-size: 1.0rem;
+    color: rgba(255, 255, 255, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+}
+
+.up-seed-value {
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.65);
+    word-break: break-all;
+}
+
+.up-seed-mono { font-family: monospace; font-size: 1.05rem; }
+
+.up-seed-formula {
+    font-size: 1.0rem;
+    font-family: monospace;
+    color: rgba(255, 255, 255, 0.25);
+    margin: 0.4rem 0 0;
+    text-align: center;
+    word-break: break-all;
+}
+
+/* ── Modal hash commitment display ── */
+
+.up-modal-hash-wrap {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 1rem;
+    padding: 1.2rem 1.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.up-modal-hash-label {
+    font-size: 1.05rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.35);
+    margin: 0;
+}
+
+.up-modal-hash-value {
+    font-family: monospace;
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.7);
+    word-break: break-all;
+    margin: 0;
+}
+
+.up-modal-hash-note {
+    font-size: 1.2rem;
+    color: rgba(255, 255, 255, 0.45);
+    margin: 0;
+}
+
+.up-modal-hash-sub {
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.3);
+    margin: 0;
+    word-break: break-all;
+}
+
+.up-mono { font-family: monospace; }
+
 /* ── SVG gradient definition (inline defs won't work with external CSS,
       so we use a solid color fallback and define the gradient in JSX) ── */
 

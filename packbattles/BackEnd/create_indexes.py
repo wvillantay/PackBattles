@@ -82,6 +82,24 @@ print("  No duplicates found.\n")
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+def make_ttl_index(collection, field, name, expire_after_seconds=0):
+    """Create a TTL index so MongoDB auto-deletes documents after expires_at."""
+    try:
+        collection.create_index(
+            [(field, pymongo.ASCENDING)],
+            name=name,
+            expireAfterSeconds=expire_after_seconds,
+        )
+        print(f"  OK    {collection.name}  [{name}]  (TTL expireAfterSeconds={expire_after_seconds})")
+    except pymongo.errors.OperationFailure as exc:
+        if exc.code in (85, 86) or "already exists" in str(exc):
+            print(f"  SKIP  {collection.name}  [{name}]  — conflicting index exists; review manually in Atlas")
+        else:
+            print(f"  ERR   {collection.name}  [{name}]: {exc}")
+            client.close()
+            raise
+
+
 def make_index(collection, keys, name, unique=False):
     """
     Create one index and log the outcome.
@@ -173,6 +191,21 @@ make_index(
     db.upgrade_log,
     [("user_id", pymongo.ASCENDING), ("created_at", pymongo.DESCENDING)],
     name="upgrade_log_user_created",
+)
+
+# upgrade_pending — TTL: MongoDB auto-deletes documents once expires_at is reached
+make_ttl_index(
+    db.upgrade_pending,
+    "expires_at",
+    name="upgrade_pending_ttl",
+    expire_after_seconds=0,
+)
+
+# upgrade_pending — confirm validation lookup: user + status
+make_index(
+    db.upgrade_pending,
+    [("user_id", pymongo.ASCENDING), ("status", pymongo.ASCENDING)],
+    name="upgrade_pending_user_status",
 )
 
 print("\nAll indexes created successfully.\n")
