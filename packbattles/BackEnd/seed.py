@@ -32,6 +32,7 @@ Fields designed for future API integration
 """
 
 import os
+from datetime import datetime, timezone
 from dotenv import load_dotenv
 from pymongo import MongoClient, ASCENDING
 from pymongo.errors import ConnectionFailure
@@ -62,6 +63,32 @@ def get_db():
         print("  For Atlas: confirm your IP is in the Atlas IP Allow List.")
         raise SystemExit(1)
     return client[DB_NAME]
+
+
+# ---------------------------------------------------------------------------
+# Phase-1 pricing/provider field defaults
+# ---------------------------------------------------------------------------
+#
+# Applied to every card at seed time via seed_cards().
+# Cards that already define a field (e.g. market_price, price_source) keep
+# their own value — CARD_FIELD_DEFAULTS only provides keys not already set.
+
+CARD_FIELD_DEFAULTS = {
+    "provider":              "manual",  # all seeded cards are manually priced
+    "provider_card_id":      None,      # no external provider ID yet
+    "tcgplayer_price_usd":   None,
+    "cardmarket_price_eur":  None,
+    "market_price_currency": None,
+    "last_price_update":     None,
+    "set_name":              None,
+    "set_code":              None,
+    "set_series":            None,
+    "set_release_date":      None,
+    "admin_price_override":  None,
+    "admin_override_note":   None,
+    "admin_override_at":     None,
+    "active":                True,
+}
 
 
 # ---------------------------------------------------------------------------
@@ -403,10 +430,19 @@ def ensure_indexes(db):
 # ---------------------------------------------------------------------------
 
 def seed_cards(db):
+    now = datetime.now(timezone.utc)
     print("Seeding cards (20 Pokemon test cards)...")
     db.cards.drop()
-    result  = db.cards.insert_many(CARDS)
-    ids     = result.inserted_ids
+
+    # Merge Phase-1 defaults into each card dict. Card-level keys win over
+    # defaults (so market_price / price_source defined per-card are kept).
+    cards_to_insert = [
+        {**CARD_FIELD_DEFAULTS, **card, "updated_at": now}
+        for card in CARDS
+    ]
+
+    result = db.cards.insert_many(cards_to_insert)
+    ids    = result.inserted_ids
     print(f"  Inserted {len(ids)} cards")
 
     # Return name → ObjectId lookup used by seed_packs

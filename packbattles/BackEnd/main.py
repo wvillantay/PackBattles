@@ -2128,6 +2128,189 @@ def admin_cards_with_inventory():
 
 
 # ---------------------------------------------------------------------------
+# Admin — card price override
+# ---------------------------------------------------------------------------
+
+@app.route("/api/admin/cards/<card_id>/price", methods=["PATCH"])
+@require_admin
+def admin_card_price_override(card_id):
+    """
+    Set or update admin_price_override (and optional note) on a card.
+    Does NOT touch the gameplay `value` field — Phase 1 only.
+    """
+    data = request.get_json(silent=True) or {}
+
+    try:
+        card_oid = ObjectId(card_id)
+    except Exception:
+        return jsonify({"error": "Invalid card_id"}), 400
+
+    card = mongo.db.cards.find_one({"_id": card_oid})
+    if not card:
+        return jsonify({"error": "Card not found"}), 404
+
+    override = data.get("admin_price_override")
+    note     = data.get("admin_override_note")
+
+    if override is None and note is None:
+        return jsonify({"error": "Provide admin_price_override and/or admin_override_note"}), 400
+
+    now        = datetime.now(timezone.utc)
+    set_fields = {"updated_at": now}
+
+    if override is not None:
+        try:
+            override = float(override)
+        except (TypeError, ValueError):
+            return jsonify({"error": "admin_price_override must be a number"}), 400
+        if override < 0:
+            return jsonify({"error": "admin_price_override must be >= 0"}), 400
+        set_fields["admin_price_override"] = override
+        set_fields["admin_override_at"]    = now
+
+    if note is not None:
+        set_fields["admin_override_note"] = str(note)
+
+    mongo.db.cards.update_one({"_id": card_oid}, {"$set": set_fields})
+
+    return jsonify({
+        "ok":                   True,
+        "card_id":              str(card_oid),
+        "card_name":            card.get("name"),
+        "admin_price_override": set_fields.get("admin_price_override"),
+        "admin_override_note":  set_fields.get("admin_override_note"),
+    })
+
+
+# ---------------------------------------------------------------------------
+# Activity feed
+# ---------------------------------------------------------------------------
+
+@app.route("/api/activity/feed", methods=["GET"])
+@require_auth
+def activity_feed():
+    limit = min(int(request.args.get("limit", 30)), 100)
+
+    events = []
+
+    # Upgrades
+    for r in mongo.db.upgrade_log.find({}).sort("created_at", -1).limit(limit):
+        if not r.get("created_at"):
+            continue
+        events.append({
+            "type":    "upgrade",
+            "user_id": r.get("user_id"),
+            "detail":  {
+                "input":  r.get("input_card_name", "?"),
+                "target": r.get("target_card_name", "?"),
+                "result": r.get("result"),
+            },
+            "ts": r["created_at"],
+        })
+
+    # Trades
+    for r in mongo.db.exchange_log.find({}).sort("created_at", -1).limit(limit):
+        if not r.get("created_at"):
+            continue
+        events.append({
+            "type":    "trade",
+            "user_id": r.get("user_id"),
+            "detail":  {
+                "offered":  r.get("offered_card_name", "?"),
+                "received": r.get("received_card_name") or r.get("replacement_card_name", "?"),
+            },
+            "ts": r["created_at"],
+        })
+
+    # Pack opens
+    for r in mongo.db.credit_transactions.find({"type": "pack_open_spend"}).sort("created_at", -1).limit(limit):
+        if not r.get("created_at"):
+            continue
+        note = r.get("note", "")
+        pack_name = note[len("Opened "):].strip() if note.startswith("Opened ") else (note or "a pack")
+        events.append({
+            "type":    "pack",
+            "user_id": r.get("user_id"),
+            "detail":  {"pack": pack_name},
+            "ts":      r["created_at"],
+        })
+
+    # Completed battles
+    for r in mongo.db.battles.find(
+        {"status": "completed", "completed_at": {"$exists": True}}
+    ).sort("completed_at", -1).limit(limit):
+        ts = r.get("completed_at")
+        if not ts:
+            continue
+        events.append({
+            "type":    "battle",
+            "user_id": r.get("winner_id"),
+            "detail":  {
+                "creator_id":  r.get("creator_id"),
+                "opponent_id": r.get("opponent_id"),
+                "winner_id":   r.get("winner_id"),
+                "is_bot":      r.get("is_bot_battle", False),
+                "bot_name":    r.get("bot_name", "Bot") if r.get("is_bot_battle") else None,
+            },
+            "ts": ts,
+        })
+
+    events.sort(key=lambda e: e["ts"], reverse=True)
+    events = events[:limit]
+
+    # Batch user lookup — collect all referenced user ObjectIds
+    uid_set = set()
+    for e in events:
+        uid = e.get("user_id")
+        if uid:
+            uid_set.add(uid if isinstance(uid, ObjectId) else ObjectId(str(uid)))
+        if e["type"] == "battle":
+            for fid in (e["detail"].get("creator_id"), e["detail"].get("opponent_id")):
+                if fid:
+                    uid_set.add(fid if isinstance(fid, ObjectId) else ObjectId(str(fid)))
+
+    users_map = {}
+    if uid_set:
+        for u in mongo.db.users.find({"_id": {"$in": list(uid_set)}}, {"name": 1}):
+            users_map[str(u["_id"])] = u.get("name", "Unknown")
+
+    def _uname(oid):
+        return users_map.get(str(oid), "Unknown") if oid else "Unknown"
+
+    out = []
+    for e in events:
+        t  = e["type"]
+        d  = e["detail"]
+        ts = e["ts"].isoformat()
+
+        if t == "upgrade":
+            outcome = "upgraded" if d.get("result") == "win" else "failed to upgrade"
+            out.append({"type": t, "user": _uname(e["user_id"]),
+                        "text": f"{outcome} {d['input']} → {d['target']}",
+                        "result": d.get("result"), "ts": ts})
+        elif t == "trade":
+            out.append({"type": t, "user": _uname(e["user_id"]),
+                        "text": f"traded {d['offered']} for {d['received']}", "ts": ts})
+        elif t == "pack":
+            out.append({"type": t, "user": _uname(e["user_id"]),
+                        "text": f"opened {d['pack']}", "ts": ts})
+        elif t == "battle":
+            wid = d.get("winner_id")
+            cid = d.get("creator_id")
+            oid_opp = d.get("opponent_id")
+            winner_name = _uname(wid)
+            if d.get("is_bot"):
+                loser_name = d.get("bot_name", "Bot")
+            else:
+                loser_id = cid if (wid and str(wid) != str(cid)) else oid_opp
+                loser_name = _uname(loser_id)
+            out.append({"type": t, "user": winner_name,
+                        "text": f"beat {loser_name} in a battle", "ts": ts})
+
+    return jsonify(out)
+
+
+# ---------------------------------------------------------------------------
 # Health check
 # ---------------------------------------------------------------------------
 
