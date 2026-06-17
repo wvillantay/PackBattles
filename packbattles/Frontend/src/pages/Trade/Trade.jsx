@@ -135,7 +135,7 @@ const Trade = () => {
                         <div className="trade-alert trade-alert-error">{error}</div>
                     )}
 
-                    <div className="row mt-5 pt-3 align-items-center">
+                    <div className="row trade-hud-row align-items-start">
                         {/* Offered card slot */}
                         <div className="col-md-4" data-aos="fade-right">
                             <p className="text-center trade-col-label">YOUR CARD</p>
@@ -161,8 +161,8 @@ const Trade = () => {
 
                         {/* Center arrow + action */}
                         <div className="col-md-4 text-center" data-aos="fade-up">
-                            <div className="up-meter mt-5">
-                                <img src="./imgs/Group 40106.png" width="100%" alt="" />
+                            <div className="trade-exchange-icon">
+                                <img src="./imgs/Group 40106.png" alt="" />
                             </div>
                             {offeredCard && selectedReplacement ? (
                                 <button

@@ -50,16 +50,11 @@
     box-shadow: 0px 20px 80px 0px rgba(7, 5, 35, 0.75);
     backdrop-filter: blur(10px);
     text-align: center;
-    height: 400px;
-    max-width: 350px;
+    min-height: 260px;
+    height: auto;
+    max-width: clamp(260px, 100%, 360px);
     padding: 1.5rem 1.3rem;
-    margin: 1.5rem auto;
-}
-
-@media (min-width: 768px) and (max-width: 991px) {
-    .trade .select-box {
-        height: 300px;
-    }
+    margin: 0.8rem auto;
 }
 
 .trade .select-box .img-wrap {
@@ -83,7 +78,7 @@
     width: 60px;
     height: 60px;
     border-radius: 50%;
-    margin: 3rem auto;
+    margin: 1.5rem auto;
     background: rgba(33, 0, 75, 0.07);
     border: 1px solid rgba(255, 255, 255, 0.15);
     filter: drop-shadow(0px 20px 80px rgba(7, 5, 35, 0.75));
@@ -116,7 +111,7 @@
 =============================================
 */
 .ideal-card-wrap {
-    margin: 5rem 0;
+    margin: 2.5rem 0;
 }
 
 .ideal-card-wrap .ideal-card-container {
@@ -533,4 +528,37 @@
 .trade-cancel-btn:hover {
     color: #fff;
     border-color: rgba(255, 255, 255, 0.7);
+}
+
+/* ── Responsive container (wide-monitor support) ── */
+.trade .container {
+    max-width: min(92vw, 1600px);
+    width: 100%;
+}
+
+/* ── HUD row ── */
+.trade-hud-row {
+    margin-top: 2.5rem;
+}
+
+/* ── Exchange icon (replaces up-meter mt-5) ── */
+.trade-exchange-icon {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 1.6rem 0 0.8rem;
+}
+
+.trade-exchange-icon img {
+    width: clamp(80px, 10vw, 150px);
+    max-width: 150px;
+    display: block;
+}
+
+/* ── Mobile tweaks ── */
+@media (max-width: 767px) {
+    .trade-hud-row { margin-top: 1.5rem; }
+    .trade-exchange-icon { padding: 1rem 0 0.4rem; }
+    .trade-exchange-icon img { width: 80px; }
+    .ideal-card-wrap { margin: 1.5rem 0; }
 }
