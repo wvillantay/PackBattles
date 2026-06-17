@@ -41,6 +41,12 @@
     background: linear-gradient(transparent, rgb(8, 6, 32) 90%);
 }
 
+/* Wider container so the HUD fills large monitors */
+.upgrade .container {
+    max-width: min(92vw, 1600px);
+    width: 100%;
+}
+
 /* ── Card slot (select-box, kept from mockup) ── */
 
 .upgrade .select-box {
@@ -50,8 +56,9 @@
     box-shadow: 0 20px 80px 0 rgba(7, 5, 35, 0.75);
     backdrop-filter: blur(10px);
     text-align: center;
-    height: 220px;
-    max-width: 350px;
+    min-height: 220px;
+    height: auto;
+    max-width: clamp(280px, 100%, 400px);
     margin: 1.5rem auto;
     transition: border-color 0.2s ease, background 0.2s ease;
 }
@@ -152,9 +159,9 @@
 /* ── Scrollable card list ── */
 
 .up-card-list {
-    max-width: 350px;
+    max-width: clamp(280px, 100%, 400px);
     margin: 0.8rem auto 0;
-    max-height: 340px;
+    max-height: clamp(240px, 30vh, 440px);
     overflow-y: auto;
     display: flex;
     flex-direction: column;
@@ -240,9 +247,19 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 420px;
+    min-height: clamp(360px, 32vw, 540px);
     padding-top: 3rem;
     gap: 2rem;
+}
+
+/* Result state: wheel left, result panel right */
+.up-center--result {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 3.5rem;
+    padding-top: 2rem;
 }
 
 /* ── Success chance ring meter ── */
@@ -387,11 +404,18 @@
     flex-direction: column;
     align-items: center;
     gap: 0.8rem;
-    padding: 3rem 2rem;
+    padding: 3rem 2.4rem;
     border-radius: 2rem;
     border: 1px solid;
-    max-width: 280px;
+    max-width: clamp(300px, 90%, 460px);
+    width: 100%;
     text-align: center;
+    animation: up-result-in 0.45s ease-out;
+}
+
+@keyframes up-result-in {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
 
 .up-result--success {
@@ -427,10 +451,39 @@
     margin: 0;
 }
 
-.up-result-chance {
-    font-size: 1.2rem;
-    color: rgba(255, 255, 255, 0.35);
-    margin: 0.4rem 0 0.8rem;
+/* ── Result stats grid ── */
+
+.up-result-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.9rem 2rem;
+    width: 100%;
+    margin: 0.6rem 0 0.4rem;
+    text-align: left;
+}
+
+.up-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.up-stat-label {
+    font-size: 1.0rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.28);
+}
+
+.up-stat-val {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.up-stat-mono {
+    font-family: monospace;
+    font-size: 1.3rem;
 }
 
 /* ── Confirmation modal ── */
@@ -692,6 +745,8 @@
 @media (max-width: 767px) {
     .up-center { min-height: 300px; padding-top: 1rem; }
 
+    .up-center--result { flex-direction: column; gap: 2rem; }
+
     .up-modal { padding: 2.4rem 2rem; }
 
     .up-modal-cards { flex-direction: column; gap: 0.8rem; }
@@ -703,5 +758,115 @@
     .up-btn-primary,
     .up-btn-secondary { width: 100%; text-align: center; }
 
-    .up-card-list { max-height: 220px; }
+    .up-card-list { max-height: 200px; }
+
+    .up-result-stats { grid-template-columns: 1fr 1fr; gap: 0.7rem 1.2rem; }
+
+    .up-result { padding: 2rem 1.6rem; }
+}
+
+/* ── Upgrade Wheel ─────────────────────────────────────────────────────────── */
+
+.up-wheel-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.up-wheel {
+    width: clamp(220px, 18vw, 340px);
+    height: clamp(220px, 18vw, 340px);
+    display: block;
+    user-select: none;
+    -webkit-user-drag: none;
+    filter: drop-shadow(0 0 28px rgba(163, 91, 255, 0.2));
+}
+
+.up-wheel-hint {
+    font-size: 1.15rem;
+    color: rgba(255, 255, 255, 0.28);
+    margin: 0;
+    text-align: center;
+}
+
+.up-wheel-spinning-txt {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.45);
+    letter-spacing: 0.12em;
+    margin: 0.2rem 0 0;
+    text-align: center;
+    animation: up-pulse 1s ease-in-out infinite;
+}
+
+@keyframes up-pulse {
+    0%, 100% { opacity: 0.45; }
+    50%       { opacity: 0.85; }
+}
+
+/* ── Chance + zone display ── */
+
+.up-chance-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+}
+
+.up-zone-range {
+    font-size: 1.1rem;
+    font-family: monospace;
+    color: rgba(255, 255, 255, 0.22);
+    letter-spacing: 0.02em;
+}
+
+/* ── Verify result section ── */
+
+.up-verify-wrap {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.2rem;
+}
+
+.up-verify-toggle {
+    all: unset;
+    font-size: 1.2rem;
+    color: rgba(255, 255, 255, 0.32);
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: color 0.15s ease;
+    padding: 0.2rem 0.6rem;
+}
+
+.up-verify-toggle:hover {
+    color: rgba(255, 255, 255, 0.65);
+}
+
+/* ── Card thumbnails ── */
+
+.up-thumb {
+    width: 44px;
+    height: 56px;
+    object-fit: cover;
+    border-radius: 0.5rem;
+    flex-shrink: 0;
+    display: block;
+}
+
+.up-thumb-placeholder {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.up-selected-img {
+    width: 80px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 0.8rem;
+    flex-shrink: 0;
+    display: block;
 }

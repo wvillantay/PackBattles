@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { FaPlus } from 'react-icons/fa6';
 import { useAuth } from '../../context/AuthContext';
@@ -13,15 +13,29 @@ const RARITY_LABEL = {
     common:     'Common',
 };
 
+const WHEEL_R    = 80;
+const WHEEL_CIRC = 2 * Math.PI * WHEEL_R;
+
+const getAngleFromTop = (e, rect) => {
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const dx = clientX - (rect.left + rect.width / 2);
+    const dy = clientY - (rect.top + rect.height / 2);
+    return ((Math.atan2(dy, dx) * 180 / Math.PI) + 90 + 360) % 360;
+};
+
 const Upgrade = () => {
     const { token } = useAuth();
 
+    // ── Card selection ──────────────────────────────────────────────────────
     const [inventory,       setInventory]       = useState([]);
     const [targets,         setTargets]         = useState([]);
     const [inputCard,       setInputCard]       = useState(null);
     const [targetCard,      setTargetCard]      = useState(null);
     const [loadingInv,      setLoadingInv]      = useState(true);
     const [loadingTgts,     setLoadingTgts]     = useState(false);
+
+    // ── Upgrade flow ────────────────────────────────────────────────────────
     const [initiating,      setInitiating]      = useState(false);
     const [confirming,      setConfirming]      = useState(false);
     const [pendingData,     setPendingData]     = useState(null);
@@ -29,6 +43,18 @@ const Upgrade = () => {
     const [result,          setResult]          = useState(null);
     const [error,           setError]           = useState('');
 
+    // ── Wheel ───────────────────────────────────────────────────────────────
+    const [winStartAngle,   setWinStartAngle]   = useState(0);
+    const [isDragging,      setIsDragging]      = useState(false);
+    const [dragOffset,      setDragOffset]      = useState(0);
+    const [spinning,        setSpinning]        = useState(false);
+    const [pointerAngle,    setPointerAngle]    = useState(0);
+    const [verifyOpen,      setVerifyOpen]      = useState(false);
+
+    const wheelRef  = useRef(null);
+    const spinTimer = useRef(null);
+
+    // ── Data loading ────────────────────────────────────────────────────────
     useEffect(() => {
         setLoadingInv(true);
         axios
@@ -52,6 +78,30 @@ const Upgrade = () => {
             .finally(() => setLoadingTgts(false));
     }, [inputCard, token]);
 
+    // ── Cleanup spin timer on unmount ───────────────────────────────────────
+    useEffect(() => {
+        return () => { if (spinTimer.current) clearTimeout(spinTimer.current); };
+    }, []);
+
+    // ── Drag: window listeners ──────────────────────────────────────────────
+    useEffect(() => {
+        if (!isDragging) return;
+        const onMove = (e) => {
+            const rect = wheelRef.current?.getBoundingClientRect();
+            if (!rect) return;
+            const angle = getAngleFromTop(e, rect);
+            setWinStartAngle(((angle - dragOffset) + 360) % 360);
+        };
+        const onUp = () => setIsDragging(false);
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup',   onUp);
+        return () => {
+            window.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseup',   onUp);
+        };
+    }, [isDragging, dragOffset]);
+
+    // ── Card selection ──────────────────────────────────────────────────────
     const selectInput = useCallback((card) => {
         if (result) return;
         setInputCard(prev => prev?.card_id === card.card_id ? null : card);
@@ -65,15 +115,23 @@ const Upgrade = () => {
         setError('');
     }, [result]);
 
-    const successChance = inputCard && targetCard
-        ? inputCard.value / targetCard.value
-        : null;
+    const successChance = inputCard && targetCard ? inputCard.value / targetCard.value : null;
+    const winArcDeg     = successChance !== null  ? successChance * 360 : 0;
+    const winEndAngle   = ((winStartAngle + winArcDeg) % 360);
+    const arcLength     = successChance !== null  ? successChance * WHEEL_CIRC : 0;
 
-    const chancePercent = successChance !== null
-        ? Math.round(successChance * 100)
-        : null;
+    // ── Wheel drag start ────────────────────────────────────────────────────
+    const handleWheelMouseDown = useCallback((e) => {
+        if (!successChance || spinning || result) return;
+        const rect = wheelRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        const clickAngle = getAngleFromTop(e, rect);
+        setDragOffset(((clickAngle - winStartAngle) + 360) % 360);
+        setIsDragging(true);
+        e.preventDefault();
+    }, [successChance, spinning, result, winStartAngle]);
 
-    // Step 1: POST /api/upgrade/init — commit phase
+    // ── Step 1: POST /api/upgrade/init — commit phase ───────────────────────
     const handleUpgradeClick = async () => {
         if (!inputCard || !targetCard || initiating || confirming) return;
         setInitiating(true);
@@ -83,9 +141,7 @@ const Upgrade = () => {
                 input_card_id:  inputCard.card_id,
                 target_card_id: targetCard.card_id,
             };
-            if (clientSeedInput.trim()) {
-                body.client_seed = clientSeedInput.trim();
-            }
+            if (clientSeedInput.trim()) body.client_seed = clientSeedInput.trim();
             const res = await axios.post(
                 `${API}/api/upgrade/init`,
                 body,
@@ -100,33 +156,41 @@ const Upgrade = () => {
         }
     };
 
-    // Step 2: POST /api/upgrade/confirm — reveal + execute phase
+    // ── Step 2: POST /api/upgrade/confirm — reveal + spin ───────────────────
     const handleConfirm = async () => {
         if (!pendingData || confirming) return;
-        const snap = pendingData;
+        const snap     = pendingData;
+        const arcStart = winStartAngle;
         setPendingData(null);
         setConfirming(true);
         setError('');
         try {
             const res = await axios.post(
                 `${API}/api/upgrade/confirm`,
-                { pending_id: snap.pending_id },
+                { pending_id: snap.pending_id, win_start_angle: arcStart },
                 { headers: { Authorization: `Bearer ${token}` } },
             );
-            setResult(res.data);
-            const inv = await axios.get(`${API}/api/inventory`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            setInventory(inv.data);
+            setConfirming(false);
+            const rollAngle = res.data.roll_angle ?? 0;
+            setSpinning(true);
+            setPointerAngle(prev => prev + 3 * 360 + rollAngle);
+            spinTimer.current = setTimeout(() => {
+                setSpinning(false);
+                setResult(res.data);
+                axios.get(`${API}/api/inventory`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                }).then(inv => setInventory(inv.data)).catch(() => {});
+            }, 3700);
         } catch (err) {
+            setConfirming(false);
             const msg = err.response?.data?.error || 'Upgrade failed. Please try again.';
             setError(msg);
-        } finally {
-            setConfirming(false);
         }
     };
 
+    // ── Reset ───────────────────────────────────────────────────────────────
     const handleReset = () => {
+        if (spinTimer.current) clearTimeout(spinTimer.current);
         setInputCard(null);
         setTargetCard(null);
         setTargets([]);
@@ -134,12 +198,15 @@ const Upgrade = () => {
         setPendingData(null);
         setClientSeedInput('');
         setError('');
+        setWinStartAngle(0);
+        setPointerAngle(0);
+        setSpinning(false);
+        setVerifyOpen(false);
     };
 
     return (
         <>
             <section className="upgrade">
-                {/* Background */}
                 <div className="packs-bg">
                     <img className="bar-img" src="./imgs/Rectangle 15.png" alt="" />
                     <img className="bg-img"  src="./imgs/image 3.png"      alt="" />
@@ -152,19 +219,21 @@ const Upgrade = () => {
 
                     <div className="row up-layout">
 
-                        {/* ── LEFT: input card selection ── */}
-                        <div className="col-md-4">
+                        {/* ── LEFT: input card ─────────────────────────── */}
+                        <div className={result ? 'd-none' : 'col-md-4'}>
                             <p className="up-panel-label">YOUR CARD</p>
-
                             <div className={`select-box d-flex justify-content-center align-items-center ${inputCard ? 'select-box--filled' : ''}`}>
                                 {inputCard ? (
                                     <div className="up-selected-card">
+                                        {inputCard.image_url
+                                            ? <img src={inputCard.image_url} alt="" className="up-selected-img" />
+                                            : <div className="up-selected-img up-thumb-placeholder" />}
                                         <span className={`up-rarity up-rarity-${inputCard.rarity}`}>
                                             {RARITY_LABEL[inputCard.rarity] || inputCard.rarity}
                                         </span>
                                         <p className="up-selected-name">{inputCard.name}</p>
                                         <p className="up-selected-value">${inputCard.value.toFixed(2)}</p>
-                                        {!result && (
+                                        {!result && !spinning && (
                                             <button className="up-deselect" onClick={() => setInputCard(null)}>
                                                 ✕ Change
                                             </button>
@@ -177,8 +246,7 @@ const Upgrade = () => {
                                     </div>
                                 )}
                             </div>
-
-                            {!result && (
+                            {!result && !spinning && (
                                 <div className="up-card-list">
                                     {loadingInv && <p className="up-hint">Loading inventory…</p>}
                                     {!loadingInv && inventory.length === 0 && (
@@ -190,6 +258,9 @@ const Upgrade = () => {
                                             className={`up-card-item ${inputCard?.card_id === card.card_id ? 'up-card-item--selected' : ''}`}
                                             onClick={() => selectInput(card)}
                                         >
+                                            {card.image_url
+                                                ? <img src={card.image_url} alt="" className="up-thumb" />
+                                                : <div className="up-thumb up-thumb-placeholder" />}
                                             <div className="up-card-info">
                                                 <span className={`up-rarity up-rarity-${card.rarity}`}>
                                                     {RARITY_LABEL[card.rarity] || card.rarity}
@@ -197,9 +268,7 @@ const Upgrade = () => {
                                                 <p className="up-card-name">{card.name}</p>
                                             </div>
                                             <div className="up-card-meta">
-                                                {card.quantity > 1 && (
-                                                    <span className="up-qty">×{card.quantity}</span>
-                                                )}
+                                                {card.quantity > 1 && <span className="up-qty">×{card.quantity}</span>}
                                                 <span className="up-card-value">${card.value.toFixed(2)}</span>
                                             </div>
                                         </div>
@@ -208,10 +277,100 @@ const Upgrade = () => {
                             )}
                         </div>
 
-                        {/* ── CENTER: chance + action ── */}
-                        <div className="col-md-4 text-center">
-                            <div className="up-center">
+                        {/* ── CENTER: wheel + controls ──────────────────── */}
+                        <div className={result ? 'col-12 text-center' : 'col-md-4 text-center'}>
+                            <div className={`up-center ${result ? 'up-center--result' : ''}`}>
+
+                                {/* ── Wheel — always visible (frozen at final angle when result is set) ── */}
+                                <div className="up-wheel-wrap">
+                                    <svg
+                                        ref={wheelRef}
+                                        className="up-wheel"
+                                        viewBox="0 0 200 200"
+                                        onMouseDown={!result && !spinning && successChance !== null ? handleWheelMouseDown : undefined}
+                                        style={{
+                                            cursor: !result && !spinning && successChance !== null
+                                                ? (isDragging ? 'grabbing' : 'grab')
+                                                : 'default',
+                                        }}
+                                    >
+                                        <defs>
+                                            <linearGradient id="up-arc-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                                <stop offset="0%"   stopColor="#A35BFF" />
+                                                <stop offset="100%" stopColor="#4ade80" />
+                                            </linearGradient>
+                                        </defs>
+
+                                        {/* Outer disc */}
+                                        <circle cx="100" cy="100" r="94"
+                                            fill="rgba(20,8,50,0.55)"
+                                            stroke="rgba(255,255,255,0.05)"
+                                            strokeWidth="1" />
+
+                                        {/* Track ring */}
+                                        <circle cx="100" cy="100" r={WHEEL_R}
+                                            fill="none"
+                                            stroke="rgba(255,255,255,0.07)"
+                                            strokeWidth="18" />
+
+                                        {/* Success arc */}
+                                        {successChance !== null && (
+                                            <g transform={`rotate(${winStartAngle - 90}, 100, 100)`}>
+                                                <circle
+                                                    cx="100" cy="100" r={WHEEL_R}
+                                                    fill="none"
+                                                    stroke="url(#up-arc-grad)"
+                                                    strokeWidth="18"
+                                                    strokeLinecap="butt"
+                                                    strokeDasharray={`${arcLength} ${WHEEL_CIRC}`}
+                                                    strokeDashoffset="0"
+                                                />
+                                            </g>
+                                        )}
+
+                                        {/* Empty-state dashed ring */}
+                                        {successChance === null && (
+                                            <circle cx="100" cy="100" r={WHEEL_R}
+                                                fill="none"
+                                                stroke="rgba(255,255,255,0.12)"
+                                                strokeWidth="2"
+                                                strokeDasharray="8 6"
+                                            />
+                                        )}
+
+                                        {/* Pointer */}
+                                        <g style={{
+                                            transform: `rotate(${pointerAngle}deg)`,
+                                            transformOrigin: '100px 100px',
+                                            transition: spinning
+                                                ? 'transform 3.5s cubic-bezier(0.17, 0.67, 0.12, 0.99)'
+                                                : 'none',
+                                        }}>
+                                            <polygon points="100,5 94.5,22 105.5,22"
+                                                fill="#ffffff" opacity="0.92" />
+                                            <line x1="100" y1="22" x2="100" y2="86"
+                                                stroke="rgba(255,255,255,0.6)"
+                                                strokeWidth="2"
+                                                strokeLinecap="round" />
+                                        </g>
+
+                                        {/* Center hub */}
+                                        <circle cx="100" cy="100" r="12"
+                                            fill="rgba(12,5,35,0.95)"
+                                            stroke="rgba(163,91,255,0.55)"
+                                            strokeWidth="1.5" />
+                                    </svg>
+
+                                    {spinning && (
+                                        <p className="up-wheel-spinning-txt">Spinning…</p>
+                                    )}
+                                    {!spinning && !result && successChance !== null && (
+                                        <p className="up-wheel-hint">Drag the arc to position your win zone</p>
+                                    )}
+                                </div>
+
                                 {result ? (
+                                    /* Result panel — beside the wheel on desktop, below on mobile */
                                     <div className={`up-result up-result--${result.result}`}>
                                         <p className="up-result-label">
                                             {result.result === 'success' ? 'SUCCESS' : 'FAILED'}
@@ -227,33 +386,57 @@ const Upgrade = () => {
                                                 <p className="up-result-card">{result.input_card_name}</p>
                                             </>
                                         )}
-                                        <p className="up-result-chance">
-                                            Chance was {Math.round(result.success_chance * 100)}%
-                                            &nbsp;·&nbsp; Roll: {result.roll?.toFixed(8)}
-                                        </p>
+                                        <div className="up-result-stats">
+                                            <div className="up-stat">
+                                                <span className="up-stat-label">Chance</span>
+                                                <span className="up-stat-val">{(result.success_chance * 100).toFixed(3)}%</span>
+                                            </div>
+                                            <div className="up-stat">
+                                                <span className="up-stat-label">Roll</span>
+                                                <span className="up-stat-val up-stat-mono">{result.roll?.toFixed(8)}</span>
+                                            </div>
+                                            <div className="up-stat">
+                                                <span className="up-stat-label">Win Zone</span>
+                                                <span className="up-stat-val up-stat-mono">
+                                                    {(result.win_start_angle ?? 0).toFixed(1)}°–{(((result.win_start_angle ?? 0) + (result.win_arc_degrees ?? 0)) % 360).toFixed(1)}°
+                                                </span>
+                                            </div>
+                                            <div className="up-stat">
+                                                <span className="up-stat-label">Landed</span>
+                                                <span className="up-stat-val up-stat-mono">{(result.roll_angle ?? 0).toFixed(1)}°</span>
+                                            </div>
+                                        </div>
 
-                                        {/* Provably fair verification */}
-                                        <div className="up-seed-section">
-                                            <p className="up-seed-title">Provably Fair Verification</p>
-                                            <div className="up-seed-row">
-                                                <span className="up-seed-label">Server Seed</span>
-                                                <span className="up-seed-value up-seed-mono">{result.server_seed}</span>
-                                            </div>
-                                            <div className="up-seed-row">
-                                                <span className="up-seed-label">Server Hash</span>
-                                                <span className="up-seed-value up-seed-mono">{result.server_seed_hash}</span>
-                                            </div>
-                                            <div className="up-seed-row">
-                                                <span className="up-seed-label">Client Seed</span>
-                                                <span className="up-seed-value up-seed-mono">{result.client_seed}</span>
-                                            </div>
-                                            <div className="up-seed-row">
-                                                <span className="up-seed-label">Nonce</span>
-                                                <span className="up-seed-value">{result.nonce}</span>
-                                            </div>
-                                            <p className="up-seed-formula">
-                                                SHA256(server_seed:client_seed:nonce)[:8] / 0x100000000
-                                            </p>
+                                        <div className="up-verify-wrap">
+                                            <button
+                                                className="up-verify-toggle"
+                                                onClick={() => setVerifyOpen(v => !v)}
+                                            >
+                                                {verifyOpen ? '▲' : '▼'}&nbsp;Verify result
+                                            </button>
+                                            {verifyOpen && (
+                                                <div className="up-seed-section">
+                                                    <div className="up-seed-row">
+                                                        <span className="up-seed-label">Server Seed</span>
+                                                        <span className="up-seed-value up-seed-mono">{result.server_seed}</span>
+                                                    </div>
+                                                    <div className="up-seed-row">
+                                                        <span className="up-seed-label">Server Hash</span>
+                                                        <span className="up-seed-value up-seed-mono">{result.server_seed_hash}</span>
+                                                    </div>
+                                                    <div className="up-seed-row">
+                                                        <span className="up-seed-label">Client Seed</span>
+                                                        <span className="up-seed-value up-seed-mono">{result.client_seed}</span>
+                                                    </div>
+                                                    <div className="up-seed-row">
+                                                        <span className="up-seed-label">Nonce</span>
+                                                        <span className="up-seed-value">{result.nonce}</span>
+                                                    </div>
+                                                    <p className="up-seed-formula">
+                                                        SHA256(server_seed:client_seed:nonce)[:8] / 0x100000000
+                                                    </p>
+                                                </div>
+                                            )}
                                         </div>
 
                                         <button className="up-btn-primary" onClick={handleReset}>
@@ -261,84 +444,78 @@ const Upgrade = () => {
                                         </button>
                                     </div>
                                 ) : (
+                                    /* Controls */
                                     <>
-                                        <div className="up-meter">
-                                            {chancePercent !== null ? (
-                                                <>
-                                                    <svg className="up-meter-ring" viewBox="0 0 120 120">
-                                                        <defs>
-                                                            <linearGradient id="up-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-                                                                <stop offset="0%"   stopColor="#A35BFF" />
-                                                                <stop offset="100%" stopColor="#4ade80" />
-                                                            </linearGradient>
-                                                        </defs>
-                                                        <circle cx="60" cy="60" r="50"
-                                                            className="up-meter-track" />
-                                                        <circle cx="60" cy="60" r="50"
-                                                            className="up-meter-fill"
-                                                            strokeDasharray={`${chancePercent * 3.14159} 314.159`}
-                                                            strokeDashoffset="0"
-                                                        />
-                                                    </svg>
-                                                    <div className="up-meter-text">
-                                                        <span className="up-chance-pct">{chancePercent}%</span>
+                                        {!spinning && (
+                                            <>
+                                                {successChance !== null ? (
+                                                    <div className="up-chance-display">
+                                                        <span className="up-chance-pct">
+                                                            {(successChance * 100).toFixed(3)}%
+                                                        </span>
                                                         <span className="up-chance-label">success chance</span>
+                                                        <span className="up-zone-range">
+                                                            {winStartAngle.toFixed(1)}° – {winEndAngle.toFixed(1)}°
+                                                        </span>
                                                     </div>
-                                                </>
-                                            ) : (
-                                                <div className="up-meter-empty">
-                                                    <p>{!inputCard ? 'Select a card to upgrade' : 'Select a target card'}</p>
-                                                </div>
-                                            )}
-                                        </div>
+                                                ) : (
+                                                    <div className="up-meter-empty">
+                                                        <p>{!inputCard ? 'Select a card to upgrade' : 'Select a target card'}</p>
+                                                    </div>
+                                                )}
 
-                                        {inputCard && targetCard && (
-                                            <div className="up-client-seed-wrap">
-                                                <label className="up-client-seed-label" htmlFor="up-client-seed">
-                                                    Client seed <span>(optional)</span>
-                                                </label>
-                                                <input
-                                                    id="up-client-seed"
-                                                    className="up-client-seed-input"
-                                                    type="text"
-                                                    placeholder="auto-generated"
-                                                    maxLength={128}
-                                                    value={clientSeedInput}
-                                                    onChange={e => setClientSeedInput(e.target.value)}
-                                                />
-                                            </div>
-                                        )}
+                                                {inputCard && targetCard && (
+                                                    <div className="up-client-seed-wrap">
+                                                        <label className="up-client-seed-label" htmlFor="up-client-seed">
+                                                            Client seed <span>(optional)</span>
+                                                        </label>
+                                                        <input
+                                                            id="up-client-seed"
+                                                            className="up-client-seed-input"
+                                                            type="text"
+                                                            placeholder="auto-generated"
+                                                            maxLength={128}
+                                                            value={clientSeedInput}
+                                                            onChange={e => setClientSeedInput(e.target.value)}
+                                                        />
+                                                    </div>
+                                                )}
 
-                                        <button
-                                            className="up-btn-primary up-upgrade-btn"
-                                            disabled={!inputCard || !targetCard || initiating || confirming}
-                                            onClick={handleUpgradeClick}
-                                        >
-                                            {initiating ? 'Preparing…' : confirming ? 'Upgrading…' : 'Upgrade'}
-                                        </button>
-                                        {inputCard && targetCard && (
-                                            <p className="up-hint up-hint--center">
-                                                You will lose <strong>{inputCard.name}</strong> regardless of outcome.
-                                            </p>
+                                                <button
+                                                    className="up-btn-primary up-upgrade-btn"
+                                                    disabled={!inputCard || !targetCard || initiating || confirming}
+                                                    onClick={handleUpgradeClick}
+                                                >
+                                                    {initiating ? 'Preparing…' : confirming ? 'Upgrading…' : 'Upgrade'}
+                                                </button>
+
+                                                {inputCard && targetCard && (
+                                                    <p className="up-hint up-hint--center">
+                                                        You will lose <strong>{inputCard.name}</strong> regardless of outcome.
+                                                    </p>
+                                                )}
+                                            </>
                                         )}
                                     </>
                                 )}
                             </div>
                         </div>
 
-                        {/* ── RIGHT: target card selection ── */}
-                        <div className="col-md-4">
+                        {/* ── RIGHT: target card ───────────────────────── */}
+                        <div className={result ? 'd-none' : 'col-md-4'}>
                             <p className="up-panel-label">TARGET CARD</p>
-
                             <div className={`select-box d-flex justify-content-center align-items-center ${targetCard ? 'select-box--filled' : ''}`}>
                                 {targetCard ? (
                                     <div className="up-selected-card">
+                                        {targetCard.image_url
+                                            ? <img src={targetCard.image_url} alt="" className="up-selected-img" />
+                                            : <div className="up-selected-img up-thumb-placeholder" />}
                                         <span className={`up-rarity up-rarity-${targetCard.rarity}`}>
                                             {RARITY_LABEL[targetCard.rarity] || targetCard.rarity}
                                         </span>
                                         <p className="up-selected-name">{targetCard.name}</p>
                                         <p className="up-selected-value">${targetCard.value.toFixed(2)}</p>
-                                        {!result && (
+                                        {!result && !spinning && (
                                             <button className="up-deselect" onClick={() => setTargetCard(null)}>
                                                 ✕ Change
                                             </button>
@@ -351,8 +528,7 @@ const Upgrade = () => {
                                     </div>
                                 )}
                             </div>
-
-                            {!result && inputCard && (
+                            {!result && !spinning && inputCard && (
                                 <div className="up-card-list">
                                     {loadingTgts && <p className="up-hint">Loading targets…</p>}
                                     {!loadingTgts && targets.length === 0 && (
@@ -364,6 +540,9 @@ const Upgrade = () => {
                                             className={`up-card-item ${targetCard?.card_id === card.card_id ? 'up-card-item--selected' : ''}`}
                                             onClick={() => selectTarget(card)}
                                         >
+                                            {card.image_url
+                                                ? <img src={card.image_url} alt="" className="up-thumb" />
+                                                : <div className="up-thumb up-thumb-placeholder" />}
                                             <div className="up-card-info">
                                                 <span className={`up-rarity up-rarity-${card.rarity}`}>
                                                     {RARITY_LABEL[card.rarity] || card.rarity}
@@ -372,7 +551,7 @@ const Upgrade = () => {
                                             </div>
                                             <div className="up-card-meta">
                                                 <span className="up-chance-tag">
-                                                    {Math.round(card.success_chance * 100)}%
+                                                    {(card.success_chance * 100).toFixed(3)}%
                                                 </span>
                                                 <span className="up-card-value">${card.value.toFixed(2)}</span>
                                             </div>
@@ -406,10 +585,10 @@ const Upgrade = () => {
                             </div>
                         </div>
                         <p className="up-modal-chance">
-                            Success chance: <strong>{Math.round(pendingData.success_chance * 100)}%</strong>
+                            Success chance: <strong>{(pendingData.success_chance * 100).toFixed(3)}%</strong>
+                            &nbsp;·&nbsp; Win zone from <strong>{winStartAngle.toFixed(1)}°</strong>
                         </p>
 
-                        {/* Provably fair hash commitment */}
                         <div className="up-modal-hash-wrap">
                             <p className="up-modal-hash-label">Server Seed Hash (SHA256)</p>
                             <p className="up-modal-hash-value">{pendingData.server_seed_hash}</p>

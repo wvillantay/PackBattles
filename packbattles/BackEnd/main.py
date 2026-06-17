@@ -1393,6 +1393,14 @@ def upgrade_confirm():
     data           = request.get_json(silent=True) or {}
     pending_id_str = data.get("pending_id", "")
 
+    win_start_angle_raw = data.get("win_start_angle", 0)
+    try:
+        win_start_angle = float(win_start_angle_raw)
+    except (TypeError, ValueError):
+        return jsonify({"error": "win_start_angle must be a number"}), 400
+    if not (0 <= win_start_angle < 360):
+        return jsonify({"error": "win_start_angle must be >= 0 and < 360"}), 400
+
     try:
         pending_oid = ObjectId(pending_id_str)
     except Exception:
@@ -1458,7 +1466,15 @@ def upgrade_confirm():
     digest         = hashlib.sha256(f"{server_seed}:{client_seed}:{nonce}".encode()).hexdigest()
     roll           = int(digest[:8], 16) / 0x100000000
     success_chance = input_value / target_value
-    succeeded      = roll < success_chance
+    win_arc_degrees = success_chance * 360
+    roll_angle      = roll * 360
+    win_end_angle   = (win_start_angle + win_arc_degrees) % 360
+    if win_arc_degrees >= 360:
+        succeeded = True
+    elif win_start_angle < win_end_angle:
+        succeeded = win_start_angle <= roll_angle < win_end_angle
+    else:
+        succeeded = roll_angle >= win_start_angle or roll_angle < win_end_angle
 
     no_card        = False
     target_unavail = False
@@ -1540,6 +1556,9 @@ def upgrade_confirm():
                     "client_seed":       client_seed,
                     "nonce":             nonce,
                     "roll":              round(roll, 8),
+                    "win_start_angle":   win_start_angle,
+                    "win_arc_degrees":   round(win_arc_degrees, 6),
+                    "roll_angle":        round(roll_angle, 6),
                     "created_at":        now,
                 }, session=session)
 
@@ -1564,6 +1583,9 @@ def upgrade_confirm():
         "server_seed_hash": server_seed_hash,
         "client_seed":      client_seed,
         "nonce":            nonce,
+        "win_start_angle":  win_start_angle,
+        "win_arc_degrees":  round(win_arc_degrees, 6),
+        "roll_angle":       round(roll_angle, 6),
     })
 
 
@@ -1589,6 +1611,9 @@ def admin_upgrade_logs():
             "client_seed":      r.get("client_seed"),
             "nonce":            r.get("nonce"),
             "roll":             r.get("roll"),
+            "win_start_angle":  r.get("win_start_angle"),
+            "win_arc_degrees":  r.get("win_arc_degrees"),
+            "roll_angle":       r.get("roll_angle"),
             "created_at":       r["created_at"].isoformat() if r.get("created_at") else None,
         })
     return jsonify(result)
