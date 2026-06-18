@@ -2193,6 +2193,53 @@ def admin_card_price_override(card_id):
 
 
 # ---------------------------------------------------------------------------
+# Admin — update card gameplay value
+# ---------------------------------------------------------------------------
+
+@app.route("/api/admin/cards/<card_id>/value", methods=["PATCH"])
+@require_admin
+def admin_card_update_value(card_id):
+    """Update only the gameplay value (card.value) for a card."""
+    try:
+        card_oid = ObjectId(card_id)
+    except Exception:
+        return jsonify({"error": "Invalid card_id"}), 400
+
+    card = mongo.db.cards.find_one({"_id": card_oid})
+    if not card:
+        return jsonify({"error": "Card not found"}), 404
+
+    data = request.get_json(silent=True) or {}
+
+    if "value" not in data:
+        return jsonify({"error": "value is required"}), 400
+
+    try:
+        new_value = float(data["value"])
+    except (TypeError, ValueError):
+        return jsonify({"error": "value must be a number"}), 400
+
+    import math
+    if not math.isfinite(new_value):
+        return jsonify({"error": "value must be a finite number"}), 400
+    if new_value < 0:
+        return jsonify({"error": "value must be >= 0"}), 400
+
+    now = datetime.now(timezone.utc)
+    mongo.db.cards.update_one(
+        {"_id": card_oid},
+        {"$set": {"value": new_value, "updated_at": now}},
+    )
+
+    return jsonify({
+        "ok":        True,
+        "card_id":   str(card_oid),
+        "card_name": card.get("name"),
+        "new_value": new_value,
+    })
+
+
+# ---------------------------------------------------------------------------
 # Admin — TCGdex search
 # ---------------------------------------------------------------------------
 

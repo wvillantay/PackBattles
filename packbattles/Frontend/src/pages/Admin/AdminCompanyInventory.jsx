@@ -65,6 +65,56 @@ const AdminCompanyInventory = () => {
     // at most one Quick Check panel open at a time
     const [expandedCard, setExpandedCard] = useState(null);
 
+    // Edit Value modal
+    const [editModal, setEditModal] = useState(null); // { card } | null
+    const [editInput, setEditInput] = useState('');
+    const [editSaving, setEditSaving] = useState(false);
+    const [editError,  setEditError]  = useState('');
+    const [editSuccess, setEditSuccess] = useState(false);
+
+    const openEditModal = (card) => {
+        setEditModal({ card });
+        setEditInput(String(card.card_value));
+        setEditSaving(false);
+        setEditError('');
+        setEditSuccess(false);
+    };
+
+    const closeEditModal = () => {
+        if (editSaving) return;
+        setEditModal(null);
+    };
+
+    const handleEditSave = () => {
+        const raw = parseFloat(editInput);
+        if (isNaN(raw) || !isFinite(raw) || raw < 0) {
+            setEditError('Enter a valid number >= 0.');
+            return;
+        }
+        setEditSaving(true);
+        setEditError('');
+        axios
+            .patch(
+                `${API}/api/admin/cards/${editModal.card.card_id}/value`,
+                { value: raw },
+                { headers: { Authorization: `Bearer ${token}` } },
+            )
+            .then(res => {
+                setCards(prev => prev.map(c =>
+                    c.card_id === editModal.card.card_id
+                        ? { ...c, card_value: res.data.new_value }
+                        : c
+                ));
+                setEditSuccess(true);
+                setEditSaving(false);
+                setTimeout(() => setEditModal(null), 1000);
+            })
+            .catch(err => {
+                setEditError(err.response?.data?.error || 'Save failed. Try again.');
+                setEditSaving(false);
+            });
+    };
+
     const fetchCards = useCallback(() => {
         setLoading(true);
         setError('');
@@ -143,6 +193,7 @@ const AdminCompanyInventory = () => {
     );
 
     return (
+        <>
         <section className="admin-page">
             <div className="packs-bg">
                 <img className="bar-img" src="./imgs/Rectangle 15.png" alt="" />
@@ -226,15 +277,24 @@ const AdminCompanyInventory = () => {
                                                     </p>
                                                 </td>
 
-                                                {/* Gameplay value + compact market hint */}
+                                                {/* Gameplay value + compact market hint + edit button */}
                                                 <td>
-                                                    <p className="admin-credits">{fmtPackCoins(card.card_value)}</p>
-                                                    {hasMkt && (
-                                                        <p className="admin-ci-mkt-hint">
-                                                            mkt {card.market_price_currency === 'USD' ? '$' : '€'}
-                                                            {card.market_price.toFixed(2)}
-                                                        </p>
-                                                    )}
+                                                    <div className="admin-ci-value-cell">
+                                                        <p className="admin-credits">{fmtPackCoins(card.card_value)}</p>
+                                                        {hasMkt && (
+                                                            <p className="admin-ci-mkt-hint">
+                                                                mkt {card.market_price_currency === 'USD' ? '$' : '€'}
+                                                                {card.market_price.toFixed(2)}
+                                                            </p>
+                                                        )}
+                                                        <button
+                                                            type="button"
+                                                            className="admin-ev-btn"
+                                                            onClick={() => openEditModal(card)}
+                                                        >
+                                                            Edit Value
+                                                        </button>
+                                                    </div>
                                                 </td>
 
                                                 {/* Qty input */}
@@ -409,6 +469,104 @@ const AdminCompanyInventory = () => {
                 )}
             </div>
         </section>
+
+        {/* ── Edit Value Modal ── */}
+        {editModal && (
+            <div
+                className="admin-ev-overlay"
+                onClick={e => { if (e.target === e.currentTarget) closeEditModal(); }}
+            >
+                <div className="admin-ev-modal">
+                    <div className="admin-ev-modal-header">
+                        <h3>Edit Gameplay Value</h3>
+                        <button
+                            className="admin-ev-close"
+                            onClick={closeEditModal}
+                            disabled={editSaving}
+                        >
+                            &#10005;
+                        </button>
+                    </div>
+
+                    <p className="admin-ev-card-name">{editModal.card.card_name}</p>
+
+                    <div className="admin-ev-info-row">
+                        <span className="admin-ev-info-label">Current Value</span>
+                        <span className="admin-ev-info-value">{fmtPackCoins(editModal.card.card_value)}</span>
+                    </div>
+
+                    {editModal.card.last_price_update && (
+                        <div className="admin-ev-info-row">
+                            <span className="admin-ev-info-label">Last Updated</span>
+                            <span className="admin-ev-info-value">{fmtDate(editModal.card.last_price_update)}</span>
+                        </div>
+                    )}
+
+                    {/* Read-only market references */}
+                    {(editModal.card.tcgplayer_price_usd != null ||
+                      editModal.card.cardmarket_price_eur != null ||
+                      editModal.card.market_price != null) && (
+                        <div className="admin-ev-mkt-section">
+                            <p className="admin-ev-mkt-label">Market References (read-only)</p>
+                            <div className="admin-ev-mkt-chips">
+                                {editModal.card.tcgplayer_price_usd != null && (
+                                    <span className="admin-ev-mkt-chip">
+                                        TCGplayer ${editModal.card.tcgplayer_price_usd.toFixed(2)} USD
+                                    </span>
+                                )}
+                                {editModal.card.cardmarket_price_eur != null && (
+                                    <span className="admin-ev-mkt-chip">
+                                        Cardmarket €{editModal.card.cardmarket_price_eur.toFixed(2)} EUR
+                                    </span>
+                                )}
+                                {editModal.card.market_price != null && (
+                                    <span className="admin-ev-mkt-chip">
+                                        Market {editModal.card.market_price_currency === 'USD' ? '$' : '€'}
+                                        {editModal.card.market_price.toFixed(2)} {editModal.card.market_price_currency || ''}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    <label className="admin-ev-field">
+                        <span className="admin-ev-field-label">New Gameplay Value (Pack Coins)</span>
+                        <input
+                            className="admin-input admin-ev-input"
+                            type="number"
+                            min="0"
+                            step="1"
+                            placeholder="e.g. 250"
+                            value={editInput}
+                            onChange={e => { setEditInput(e.target.value); setEditError(''); }}
+                            disabled={editSaving || editSuccess}
+                            autoFocus
+                        />
+                    </label>
+
+                    {editError   && <p className="admin-ev-error">{editError}</p>}
+                    {editSuccess && <p className="admin-ev-success">Saved ✓</p>}
+
+                    <div className="admin-ev-actions">
+                        <button
+                            className="bt-btn-outline"
+                            onClick={closeEditModal}
+                            disabled={editSaving}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            className="admin-btn-primary"
+                            onClick={handleEditSave}
+                            disabled={editSaving || editSuccess}
+                        >
+                            {editSaving ? 'Saving…' : 'Save'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+    </>
     );
 };
 
