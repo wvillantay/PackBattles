@@ -12,6 +12,42 @@ const RARITY_LABEL = {
     common:     'Common',
 };
 
+// ── Marketplace URL helpers ────────────────────────────────────────────────
+
+function cardNumber(providerCardId) {
+    if (!providerCardId) return null;
+    const last = providerCardId.split('-').pop();
+    return /^\d+$/.test(last) ? last : null;
+}
+
+function buildSearchStr(card) {
+    const parts = [card.card_name];
+    if (card.set_name) parts.push(card.set_name);
+    const num = cardNumber(card.provider_card_id);
+    if (num) parts.push(num);
+    return parts.join(' ');
+}
+
+function buildLinks(card) {
+    const q    = encodeURIComponent(buildSearchStr(card));
+    const name = encodeURIComponent(card.card_name);
+    return {
+        tcgplayer:   `https://www.tcgplayer.com/search/pokemon/product?q=${q}`,
+        ebayActive:  `https://www.ebay.com/sch/i.html?_nkw=${q}`,
+        ebaySold:    `https://www.ebay.com/sch/i.html?_nkw=${q}&LH_Sold=1&LH_Complete=1`,
+        pricecharting: `https://www.pricecharting.com/search-products?q=${name}`,
+        cardmarket:  `https://www.cardmarket.com/en/Pokemon/Products/Search?searchString=${q}&exactMatch=false`,
+    };
+}
+
+function fmtDate(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+// ── Component ──────────────────────────────────────────────────────────────
+
 const AdminCompanyInventory = () => {
     const { token } = useAuth();
 
@@ -24,6 +60,9 @@ const AdminCompanyInventory = () => {
     const [edits,  setEdits]  = useState({});
     // saving[card_id] = 'idle' | 'saving' | 'saved' | 'error'
     const [saving, setSaving] = useState({});
+
+    // at most one Quick Check panel open at a time
+    const [expandedCard, setExpandedCard] = useState(null);
 
     const fetchCards = useCallback(() => {
         setLoading(true);
@@ -48,12 +87,6 @@ const AdminCompanyInventory = () => {
         edits[card.card_id]?.fulfillable !== undefined
             ? edits[card.card_id].fulfillable
             : card.fulfillable;
-
-    const isEligible = (card) => {
-        const qty = getQty(card);
-        const ful = getFulfillable(card);
-        return qty > 0 || ful;
-    };
 
     const isDirty = (card) => edits[card.card_id] !== undefined;
 
@@ -83,7 +116,6 @@ const AdminCompanyInventory = () => {
                 { headers: { Authorization: `Bearer ${token}` } },
             )
             .then(() => {
-                // merge saved values back into cards so server state stays fresh
                 setCards(prev => prev.map(c =>
                     c.card_id === cardId
                         ? { ...c, available_quantity: qty, fulfillable: ful,
@@ -93,13 +125,16 @@ const AdminCompanyInventory = () => {
                 ));
                 setEdits(prev => { const n = { ...prev }; delete n[cardId]; return n; });
                 setSaving(prev => ({ ...prev, [cardId]: 'saved' }));
-                // clear the "Saved" label after 2 s
                 setTimeout(() =>
                     setSaving(prev => ({ ...prev, [cardId]: 'idle' })), 2000);
             })
             .catch(() => {
                 setSaving(prev => ({ ...prev, [cardId]: 'error' }));
             });
+    };
+
+    const toggleExpand = (cardId) => {
+        setExpandedCard(prev => (prev === cardId ? null : cardId));
     };
 
     const filtered = cards.filter(c =>
@@ -151,99 +186,218 @@ const AdminCompanyInventory = () => {
                                     <th>FULFILLABLE</th>
                                     <th>ELIGIBLE</th>
                                     <th>SAVE</th>
+                                    <th>MARKET</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {filtered.map(card => {
-                                    const qty  = getQty(card);
-                                    const ful  = getFulfillable(card);
-                                    const elig = qty > 0 || ful;
-                                    const st   = saving[card.card_id] || 'idle';
-                                    const dirty = isDirty(card);
+                                    const qty     = getQty(card);
+                                    const ful     = getFulfillable(card);
+                                    const elig    = qty > 0 || ful;
+                                    const st      = saving[card.card_id] || 'idle';
+                                    const dirty   = isDirty(card);
+                                    const open    = expandedCard === card.card_id;
+                                    const links   = buildLinks(card);
+                                    const hasMkt  = card.market_price != null;
 
                                     return (
-                                        <tr key={card.card_id}>
-                                            {/* Card name + optional thumbnail */}
-                                            <td>
-                                                <div className="admin-ci-card-cell">
-                                                    {card.card_image_url && (
-                                                        <img
-                                                            className="admin-ci-thumb"
-                                                            src={card.card_image_url}
-                                                            alt={card.card_name}
-                                                        />
+                                        <React.Fragment key={card.card_id}>
+                                            {/* ── Main row ── */}
+                                            <tr>
+                                                {/* Card name + thumbnail */}
+                                                <td>
+                                                    <div className="admin-ci-card-cell">
+                                                        {card.card_image_url && (
+                                                            <img
+                                                                className="admin-ci-thumb"
+                                                                src={card.card_image_url}
+                                                                alt={card.card_name}
+                                                            />
+                                                        )}
+                                                        <p className="admin-ci-name">{card.card_name}</p>
+                                                    </div>
+                                                </td>
+
+                                                {/* Rarity */}
+                                                <td>
+                                                    <p className={`admin-ci-rarity admin-ci-rarity-${card.card_rarity}`}>
+                                                        {RARITY_LABEL[card.card_rarity] || card.card_rarity}
+                                                    </p>
+                                                </td>
+
+                                                {/* Gameplay value + compact market hint */}
+                                                <td>
+                                                    <p className="admin-credits">${card.card_value.toFixed(2)}</p>
+                                                    {hasMkt && (
+                                                        <p className="admin-ci-mkt-hint">
+                                                            mkt {card.market_price_currency === 'USD' ? '$' : '€'}
+                                                            {card.market_price.toFixed(2)}
+                                                        </p>
                                                     )}
-                                                    <p className="admin-ci-name">{card.card_name}</p>
-                                                </div>
-                                            </td>
+                                                </td>
 
-                                            {/* Rarity */}
-                                            <td>
-                                                <p className={`admin-ci-rarity admin-ci-rarity-${card.card_rarity}`}>
-                                                    {RARITY_LABEL[card.card_rarity] || card.card_rarity}
-                                                </p>
-                                            </td>
-
-                                            {/* Value */}
-                                            <td>
-                                                <p className="admin-credits">${card.card_value.toFixed(2)}</p>
-                                            </td>
-
-                                            {/* Qty input */}
-                                            <td>
-                                                <input
-                                                    className="admin-input admin-ci-qty-input"
-                                                    type="number"
-                                                    min="0"
-                                                    value={qty}
-                                                    onChange={e => handleQtyChange(card.card_id, e.target.value)}
-                                                />
-                                            </td>
-
-                                            {/* Fulfillable checkbox */}
-                                            <td>
-                                                <label className="admin-ci-toggle">
+                                                {/* Qty input */}
+                                                <td>
                                                     <input
-                                                        type="checkbox"
-                                                        checked={ful}
-                                                        onChange={e => handleFulfillableChange(card.card_id, e.target.checked)}
+                                                        className="admin-input admin-ci-qty-input"
+                                                        type="number"
+                                                        min="0"
+                                                        value={qty}
+                                                        onChange={e => handleQtyChange(card.card_id, e.target.value)}
                                                     />
-                                                    <span className="admin-ci-toggle-track" />
-                                                </label>
-                                            </td>
+                                                </td>
 
-                                            {/* Trade-eligible badge */}
-                                            <td>
-                                                <span className={`admin-status-badge ${elig ? 'admin-status-completed' : 'admin-status-cancelled'}`}>
-                                                    {elig ? 'Eligible' : 'Not Eligible'}
-                                                </span>
-                                            </td>
+                                                {/* Fulfillable toggle */}
+                                                <td>
+                                                    <label className="admin-ci-toggle">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={ful}
+                                                            onChange={e => handleFulfillableChange(card.card_id, e.target.checked)}
+                                                        />
+                                                        <span className="admin-ci-toggle-track" />
+                                                    </label>
+                                                </td>
 
-                                            {/* Save button + feedback */}
-                                            <td>
-                                                <div className="admin-ci-save-cell">
+                                                {/* Trade-eligible badge */}
+                                                <td>
+                                                    <span className={`admin-status-badge ${elig ? 'admin-status-completed' : 'admin-status-cancelled'}`}>
+                                                        {elig ? 'Eligible' : 'Not Eligible'}
+                                                    </span>
+                                                </td>
+
+                                                {/* Save button + feedback */}
+                                                <td>
+                                                    <div className="admin-ci-save-cell">
+                                                        <button
+                                                            className="admin-btn-primary admin-ci-save-btn"
+                                                            disabled={!dirty || st === 'saving'}
+                                                            onClick={() => handleSave(card)}
+                                                        >
+                                                            {st === 'saving' ? 'Saving…' : 'Save'}
+                                                        </button>
+                                                        {st === 'saved' && (
+                                                            <span className="admin-ci-feedback admin-ci-feedback-ok">Saved ✓</span>
+                                                        )}
+                                                        {st === 'error' && (
+                                                            <span className="admin-ci-feedback admin-ci-feedback-err">Error</span>
+                                                        )}
+                                                    </div>
+                                                </td>
+
+                                                {/* Quick Check toggle */}
+                                                <td>
                                                     <button
-                                                        className="admin-btn-primary admin-ci-save-btn"
-                                                        disabled={!dirty || st === 'saving'}
-                                                        onClick={() => handleSave(card)}
+                                                        type="button"
+                                                        className={`admin-qc-toggle${open ? ' admin-qc-toggle-open' : ''}`}
+                                                        onClick={() => toggleExpand(card.card_id)}
+                                                        title="Marketplace Quick Check"
                                                     >
-                                                        {st === 'saving' ? 'Saving…' : 'Save'}
+                                                        Check {open ? '▲' : '▼'}
                                                     </button>
-                                                    {st === 'saved' && (
-                                                        <span className="admin-ci-feedback admin-ci-feedback-ok">Saved ✓</span>
-                                                    )}
-                                                    {st === 'error' && (
-                                                        <span className="admin-ci-feedback admin-ci-feedback-err">Error</span>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
+                                                </td>
+                                            </tr>
+
+                                            {/* ── Expanded Quick Check panel ── */}
+                                            {open && (
+                                                <tr className="admin-qc-row">
+                                                    <td colSpan={8}>
+                                                        <div className="admin-qc-panel">
+                                                            <p className="admin-qc-label">
+                                                                Manual Market Check
+                                                                <span className="admin-qc-disclaimer">
+                                                                    — links open external sites. Prices and availability are not verified.
+                                                                </span>
+                                                            </p>
+
+                                                            {/* Stored reference prices */}
+                                                            <div className="admin-qc-prices">
+                                                                <div className="admin-qc-price-chip">
+                                                                    <span className="admin-qc-price-label">TCGplayer</span>
+                                                                    <span className="admin-qc-price-value">
+                                                                        {card.tcgplayer_price_usd != null
+                                                                            ? `$${card.tcgplayer_price_usd.toFixed(2)} USD`
+                                                                            : '—'}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="admin-qc-price-chip">
+                                                                    <span className="admin-qc-price-label">Cardmarket</span>
+                                                                    <span className="admin-qc-price-value">
+                                                                        {card.cardmarket_price_eur != null
+                                                                            ? `€${card.cardmarket_price_eur.toFixed(2)} EUR`
+                                                                            : '—'}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="admin-qc-price-chip">
+                                                                    <span className="admin-qc-price-label">Market Price</span>
+                                                                    <span className="admin-qc-price-value">
+                                                                        {card.market_price != null
+                                                                            ? `${card.market_price_currency === 'USD' ? '$' : '€'}${card.market_price.toFixed(2)} ${card.market_price_currency || ''}`
+                                                                            : '—'}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="admin-qc-price-chip">
+                                                                    <span className="admin-qc-price-label">Last Updated</span>
+                                                                    <span className="admin-qc-price-value">
+                                                                        {fmtDate(card.last_price_update)}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Marketplace links */}
+                                                            <div className="admin-qc-links">
+                                                                <a
+                                                                    className="admin-qc-link admin-qc-link-tcg"
+                                                                    href={links.tcgplayer}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                >
+                                                                    TCGplayer
+                                                                </a>
+                                                                <a
+                                                                    className="admin-qc-link admin-qc-link-ebay"
+                                                                    href={links.ebayActive}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                >
+                                                                    eBay Active
+                                                                </a>
+                                                                <a
+                                                                    className="admin-qc-link admin-qc-link-ebay"
+                                                                    href={links.ebaySold}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                >
+                                                                    eBay Sold
+                                                                </a>
+                                                                <a
+                                                                    className="admin-qc-link admin-qc-link-pc"
+                                                                    href={links.pricecharting}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                >
+                                                                    PriceCharting
+                                                                </a>
+                                                                <a
+                                                                    className="admin-qc-link admin-qc-link-cm"
+                                                                    href={links.cardmarket}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                >
+                                                                    Cardmarket
+                                                                </a>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </React.Fragment>
                                     );
                                 })}
 
                                 {filtered.length === 0 && (
                                     <tr>
-                                        <td colSpan={7}>
+                                        <td colSpan={8}>
                                             <p className="admin-empty">No cards match your search.</p>
                                         </td>
                                     </tr>

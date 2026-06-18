@@ -695,6 +695,162 @@
 .admin-ci-feedback-ok  { color: #4ade80; }
 .admin-ci-feedback-err { color: #f87171; }
 
+/* ---- Marketplace Quick Check ---- */
+
+/* Compact market price hint below gameplay value */
+.admin-ci-mkt-hint {
+    color: rgba(163, 91, 255, 0.55) !important;
+    font-size: 1.1rem !important;
+    font-weight: 400 !important;
+    margin: 0.2rem 0 0 !important;
+    white-space: nowrap;
+}
+
+/* Toggle button in MARKET column */
+.admin-qc-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.45rem 1rem;
+    border-radius: 0.8rem;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.55);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    cursor: pointer;
+    transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+    white-space: nowrap;
+    font-family: inherit;
+}
+
+.admin-qc-toggle:hover {
+    color: #fff;
+    border-color: rgba(163, 91, 255, 0.4);
+    background: rgba(163, 91, 255, 0.1);
+}
+
+.admin-qc-toggle-open {
+    color: #A35BFF;
+    border-color: rgba(163, 91, 255, 0.5);
+    background: rgba(163, 91, 255, 0.1);
+}
+
+/* Expanded row — no background pseudo-element override */
+.admin-qc-row td {
+    padding: 0 !important;
+}
+
+.admin-qc-row::after {
+    display: none !important;
+}
+
+/* Panel content */
+.admin-qc-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    padding: 1.4rem 1.6rem 1.6rem;
+    margin: 0 0 0.6rem;
+    background: rgba(163, 91, 255, 0.05);
+    border: 1px solid rgba(163, 91, 255, 0.2);
+    border-radius: 1.2rem;
+}
+
+.admin-qc-label {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.55);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin: 0;
+}
+
+.admin-qc-disclaimer {
+    font-weight: 400;
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.28);
+    text-transform: none;
+    letter-spacing: 0;
+    margin-left: 0.4rem;
+}
+
+/* Stored price chips row */
+.admin-qc-prices {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.admin-qc-price-chip {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 0.7rem 1.2rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0.8rem;
+    min-width: 100px;
+}
+
+.admin-qc-price-label {
+    font-size: 1.05rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.35);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.admin-qc-price-value {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.75);
+}
+
+/* Marketplace link pills */
+.admin-qc-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.7rem;
+}
+
+.admin-qc-link {
+    display: inline-block;
+    padding: 0.45rem 1.2rem;
+    border-radius: 2rem;
+    font-size: 1.25rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: opacity 0.15s ease;
+    white-space: nowrap;
+}
+
+.admin-qc-link:hover { opacity: 0.75; }
+
+.admin-qc-link-tcg {
+    background: rgba(243, 104, 56, 0.15);
+    color: #f36838;
+    border: 1px solid rgba(243, 104, 56, 0.3);
+}
+
+.admin-qc-link-ebay {
+    background: rgba(232, 48, 40, 0.12);
+    color: #e88f00;
+    border: 1px solid rgba(232, 143, 0, 0.3);
+}
+
+.admin-qc-link-pc {
+    background: rgba(96, 165, 250, 0.12);
+    color: #60a5fa;
+    border: 1px solid rgba(96, 165, 250, 0.25);
+}
+
+.admin-qc-link-cm {
+    background: rgba(74, 222, 128, 0.1);
+    color: #4ade80;
+    border: 1px solid rgba(74, 222, 128, 0.22);
+}
+
 /* ---- Card Import page ---- */
 
 .admin-import-banner {

@@ -2110,17 +2110,27 @@ def admin_cards_with_inventory():
         inv = inv_map.get(cid, {})
         qty         = inv.get("available_quantity", 0)
         fulfillable = inv.get("fulfillable", False)
+        lpu = card.get("last_price_update")
         result.append({
-            "card_id":            cid,
-            "card_name":          card.get("name", ""),
-            "card_rarity":        card.get("rarity", ""),
-            "card_value":         float(card.get("value", 0)),
-            "card_image_url":     card.get("image_url", ""),
-            "available_quantity": qty,
-            "fulfillable":        fulfillable,
-            "in_inventory":       cid in inv_map,
-            "trade_eligible":     qty > 0 or fulfillable,
-            "updated_at":         inv["updated_at"].isoformat() if inv.get("updated_at") else None,
+            "card_id":               cid,
+            "card_name":             card.get("name", ""),
+            "card_rarity":           card.get("rarity", ""),
+            "card_value":            float(card.get("value", 0)),
+            "card_image_url":        card.get("image_url", ""),
+            "available_quantity":    qty,
+            "fulfillable":           fulfillable,
+            "in_inventory":          cid in inv_map,
+            "trade_eligible":        qty > 0 or fulfillable,
+            "updated_at":            inv["updated_at"].isoformat() if inv.get("updated_at") else None,
+            # Pricing / provider fields for Marketplace Quick Check (admin-only)
+            "set_name":              card.get("set_name"),
+            "set_code":              card.get("set_code"),
+            "provider_card_id":      card.get("provider_card_id"),
+            "tcgplayer_price_usd":   card.get("tcgplayer_price_usd"),
+            "cardmarket_price_eur":  card.get("cardmarket_price_eur"),
+            "market_price":          card.get("market_price"),
+            "market_price_currency": card.get("market_price_currency"),
+            "last_price_update":     lpu.isoformat() if lpu else None,
         })
 
     result.sort(key=lambda x: (RARITY_ORDER.get(x["card_rarity"], 99), x["card_name"]))
