@@ -20,6 +20,7 @@ import Events from './pages/Events/Events'
 import Event from './pages/Event/Event'
 import Upgrade from './pages/Upgrade/Upgrade'
 import Trade from './pages/Trade/Trade'
+import Activity from './pages/Activity/Activity'
 import Battles from './pages/Battles/Battles'
 import DuelBattle from './pages/DuelBattle/DuelBattle'
 import Profile from './pages/Profile/Profile'
@@ -41,6 +42,7 @@ import AdminUserDetail from './pages/Admin/AdminUserDetail'
 import AdminBattles from './pages/Admin/AdminBattles'
 import AdminTransactions from './pages/Admin/AdminTransactions'
 import AdminCompanyInventory from './pages/Admin/AdminCompanyInventory'
+import AdminCardImport from './pages/Admin/AdminCardImport'
 
 const App = () => {
   useEffect(() => {
@@ -64,6 +66,7 @@ const App = () => {
         <Route path="/duel-battle/:id"    element={<ProtectedRoute><DuelBattle /></ProtectedRoute>} />
         <Route path="/profile"            element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/trade"              element={<ProtectedRoute><Trade /></ProtectedRoute>} />
+        <Route path="/activity"           element={<ProtectedRoute><Activity /></ProtectedRoute>} />
 
         {/* Admin routes — require login + is_admin */}
         <Route path="/admin"              element={<AdminRoute><AdminDashboard /></AdminRoute>} />
@@ -72,6 +75,7 @@ const App = () => {
         <Route path="/admin/battles"      element={<AdminRoute><AdminBattles /></AdminRoute>} />
         <Route path="/admin/transactions"       element={<AdminRoute><AdminTransactions /></AdminRoute>} />
         <Route path="/admin/company-inventory" element={<AdminRoute><AdminCompanyInventory /></AdminRoute>} />
+        <Route path="/admin/card-import"       element={<AdminRoute><AdminCardImport /></AdminRoute>} />
 
         {/* Static mockup pages — not yet wired, left unprotected for now */}
         <Route path="/events"                          element={<Events />} />

@@ -2183,6 +2183,163 @@ def admin_card_price_override(card_id):
 
 
 # ---------------------------------------------------------------------------
+# Admin — TCGdex search
+# ---------------------------------------------------------------------------
+
+@app.route("/api/admin/tcgdex/search", methods=["GET"])
+@require_admin
+def admin_tcgdex_search():
+    """Search TCGdex by card name. Returns up to 20 preview objects."""
+    q = request.args.get("q", "").strip()
+    if not q:
+        return jsonify({"error": "q parameter is required"}), 400
+
+    try:
+        from providers.tcgdex import TcgDexProvider
+        results = TcgDexProvider().search(q)
+    except Exception as exc:
+        return jsonify({"error": f"TCGdex unavailable: {exc}"}), 502
+
+    out = []
+    for r in results[:20]:
+        out.append({
+            "provider_card_id":      r.provider_card_id,
+            "name":                  r.name,
+            "image_url":             r.image_url,
+            "set_name":              r.set_name,
+            "set_code":              r.set_code,
+            "rarity":                r.rarity,
+            "tcgplayer_price_usd":   r.tcgplayer_price_usd,
+            "cardmarket_price_eur":  r.cardmarket_price_eur,
+            "market_price":          r.market_price,
+            "market_price_currency": r.market_price_currency,
+        })
+
+    return jsonify(out)
+
+
+# ---------------------------------------------------------------------------
+# Admin — import card from TCGdex
+# ---------------------------------------------------------------------------
+
+_VALID_RARITIES = {"common", "uncommon", "rare", "ultra_rare"}
+
+
+@app.route("/api/admin/cards/import", methods=["POST"])
+@require_admin
+def admin_import_card():
+    """
+    Import a card from TCGdex into the cards collection.
+
+    The backend re-fetches all provider fields (image_url, prices, set data)
+    directly from TCGdex using provider_card_id. Only admin-editable fields
+    are accepted from the request body: value, rarity, name, admin_price_override,
+    admin_override_note.
+
+    value is required and sets the gameplay value. market_price fields are
+    stored for reference only and do not affect gameplay.
+    """
+    data = request.get_json(silent=True) or {}
+
+    # ── provider_card_id ─────────────────────────────────────────────────
+    provider_card_id = (data.get("provider_card_id") or "").strip()
+    if not provider_card_id:
+        return jsonify({"error": "provider_card_id is required"}), 400
+
+    # ── value (gameplay) — required, >= 0 ────────────────────────────────
+    raw_value = data.get("value")
+    if raw_value is None or raw_value == "":
+        return jsonify({"error": "value is required"}), 400
+    try:
+        value = float(raw_value)
+    except (TypeError, ValueError):
+        return jsonify({"error": "value must be a number"}), 400
+    if value < 0:
+        return jsonify({"error": "value must be >= 0"}), 400
+
+    # ── rarity — required, must be our enum ──────────────────────────────
+    rarity = (data.get("rarity") or "").strip()
+    if rarity not in _VALID_RARITIES:
+        return jsonify({
+            "error": f"rarity must be one of: {', '.join(sorted(_VALID_RARITIES))}"
+        }), 400
+
+    # ── admin_price_override — optional, >= 0 ────────────────────────────
+    raw_override = data.get("admin_price_override")
+    admin_price_override = None
+    if raw_override is not None and raw_override != "":
+        try:
+            admin_price_override = float(raw_override)
+        except (TypeError, ValueError):
+            return jsonify({"error": "admin_price_override must be a number"}), 400
+        if admin_price_override < 0:
+            return jsonify({"error": "admin_price_override must be >= 0"}), 400
+
+    # ── duplicate check on provider + provider_card_id ───────────────────
+    existing = mongo.db.cards.find_one({
+        "provider": "tcgdex",
+        "provider_card_id": provider_card_id,
+    })
+    if existing:
+        return jsonify({
+            "error": (
+                f"Card '{provider_card_id}' is already in the catalog "
+                f"(id: {str(existing['_id'])})"
+            )
+        }), 409
+
+    # ── re-fetch from TCGdex — never trust frontend provider fields ───────
+    try:
+        from providers.tcgdex import TcgDexProvider
+        card_result = TcgDexProvider().get_card(provider_card_id)
+    except Exception as exc:
+        return jsonify({"error": f"TCGdex unavailable: {exc}"}), 502
+
+    if card_result is None:
+        return jsonify({
+            "error": f"Card '{provider_card_id}' not found on TCGdex"
+        }), 404
+
+    # ── build document ────────────────────────────────────────────────────
+    now  = datetime.now(timezone.utc)
+    name = (data.get("name") or "").strip() or card_result.name
+
+    doc = {
+        # Admin-set fields
+        "name":                  name,
+        "rarity":                rarity,
+        "value":                 value,
+        "game":                  "Pokemon",
+        # Provider data (re-fetched from TCGdex)
+        "image_url":             card_result.image_url,
+        "provider":              "tcgdex",
+        "provider_card_id":      card_result.provider_card_id,
+        "set_name":              card_result.set_name,
+        "set_code":              card_result.set_code,
+        "set_series":            None,
+        "set_release_date":      card_result.set_release_date,
+        "tcgplayer_price_usd":   card_result.tcgplayer_price_usd,
+        "cardmarket_price_eur":  card_result.cardmarket_price_eur,
+        "market_price":          card_result.market_price,
+        "market_price_currency": card_result.market_price_currency,
+        "price_source":          "tcgdex",
+        "last_price_update":     now,
+        # Admin override (optional)
+        "admin_price_override":  admin_price_override,
+        "admin_override_note":   data.get("admin_override_note") or None,
+        "admin_override_at":     now if admin_price_override is not None else None,
+        # Defaults
+        "active":                True,
+        "updated_at":            now,
+    }
+
+    result    = mongo.db.cards.insert_one(doc)
+    card_id   = str(result.inserted_id)
+
+    return jsonify({"ok": True, "card_id": card_id, "name": name}), 201
+
+
+# ---------------------------------------------------------------------------
 # Activity feed
 # ---------------------------------------------------------------------------
 

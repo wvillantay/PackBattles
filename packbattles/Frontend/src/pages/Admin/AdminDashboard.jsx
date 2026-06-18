@@ -41,6 +41,11 @@ const AdminDashboard = () => {
                         <p>Set available quantity and fulfillable status for trade-in replacements.</p>
                         <span className="admin-card-cta">Manage Inventory →</span>
                     </Link>
+                    <Link to="/admin/card-import" className="admin-card">
+                        <h3>Card Import</h3>
+                        <p>Search TCGdex and import cards into the catalog with pricing data.</p>
+                        <span className="admin-card-cta">Import Cards →</span>
+                    </Link>
                 </div>
             </div>
         </section>

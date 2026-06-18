@@ -695,6 +695,242 @@
 .admin-ci-feedback-ok  { color: #4ade80; }
 .admin-ci-feedback-err { color: #f87171; }
 
+/* ---- Card Import page ---- */
+
+.admin-import-banner {
+    display: flex;
+    align-items: center;
+    gap: 1.6rem;
+    flex-wrap: wrap;
+    padding: 1.4rem 2rem;
+    background: rgba(74, 222, 128, 0.08);
+    border: 1px solid rgba(74, 222, 128, 0.25);
+    border-radius: 1.2rem;
+    color: #4ade80;
+    font-size: 1.4rem;
+    margin-bottom: 2.4rem;
+}
+
+.admin-import-banner strong { color: #fff; }
+
+.admin-import-banner-link {
+    color: #A35BFF;
+    font-weight: 600;
+    text-decoration: none;
+    margin-left: auto;
+}
+
+.admin-import-banner-link:hover { color: #fff; }
+
+.admin-import-layout {
+    display: flex;
+    gap: 2.4rem;
+    align-items: flex-start;
+}
+
+.admin-import-left {
+    flex: 0 0 38%;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+}
+
+.admin-import-right {
+    flex: 1;
+    min-width: 0;
+}
+
+.admin-import-search-row {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.admin-import-search-input {
+    flex: 1;
+    min-width: 0;
+}
+
+.admin-import-results {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.admin-import-result-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.2rem;
+    background: rgba(33, 0, 75, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1.2rem;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.15s ease, background 0.15s ease;
+    width: 100%;
+}
+
+.admin-import-result-row:hover {
+    border-color: rgba(163, 91, 255, 0.4);
+    background: rgba(33, 0, 75, 0.28);
+}
+
+.admin-import-result-active {
+    border-color: rgba(163, 91, 255, 0.7) !important;
+    background: rgba(33, 0, 75, 0.4) !important;
+}
+
+.admin-import-result-thumb {
+    width: 3.6rem;
+    height: 3.6rem;
+    object-fit: contain;
+    border-radius: 0.4rem;
+    flex-shrink: 0;
+}
+
+.admin-import-result-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.admin-import-result-name {
+    color: #fff;
+    font-size: 1.35rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.admin-import-result-meta {
+    color: rgba(255, 255, 255, 0.38);
+    font-size: 1.1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.admin-import-result-price {
+    color: #A35BFF;
+    font-size: 1.2rem;
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.admin-import-empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 24rem;
+    border: 1px dashed rgba(255, 255, 255, 0.15);
+    border-radius: 1.6rem;
+}
+
+.admin-import-empty-state p {
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 1.4rem;
+    text-align: center;
+    padding: 2rem;
+}
+
+.admin-import-form {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    background: rgba(33, 0, 75, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 1.6rem;
+    padding: 2.4rem;
+}
+
+.admin-import-preview-img-wrap {
+    display: flex;
+    justify-content: center;
+}
+
+.admin-import-preview-img {
+    max-height: 20rem;
+    max-width: 100%;
+    object-fit: contain;
+    border-radius: 0.8rem;
+}
+
+.admin-import-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 1.2rem 1.6rem;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 1rem;
+}
+
+.admin-import-meta-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.admin-import-meta-label {
+    color: rgba(255, 255, 255, 0.38);
+    font-size: 1.2rem;
+    white-space: nowrap;
+}
+
+.admin-import-meta-value {
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 1.3rem;
+    font-weight: 500;
+    text-align: right;
+}
+
+.admin-import-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 1.4rem;
+}
+
+.admin-import-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.admin-import-field-label {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 1.2rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.admin-import-required {
+    color: #f87171;
+}
+
+.admin-import-hint {
+    color: rgba(255, 255, 255, 0.28);
+    font-size: 1.1rem;
+}
+
+.admin-import-field .admin-input,
+.admin-import-field .admin-select {
+    width: 100%;
+}
+
+.admin-import-submit {
+    align-self: flex-start;
+    padding: 1rem 2.8rem;
+}
+
 /* ---- Mobile ---- */
 
 @media (max-width: 767px) {
@@ -719,5 +955,22 @@
     .admin-adjust-form .admin-input,
     .admin-adjust-form .admin-btn-primary {
         width: 100% !important;
+    }
+
+    .admin-import-layout {
+        flex-direction: column;
+    }
+
+    .admin-import-left {
+        flex: none;
+        width: 100%;
+    }
+
+    .admin-import-results {
+        max-height: 40vh;
+    }
+
+    .admin-import-search-row {
+        flex-wrap: wrap;
     }
 }
