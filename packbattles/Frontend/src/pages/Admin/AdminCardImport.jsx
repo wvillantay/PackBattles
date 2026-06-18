@@ -313,7 +313,7 @@ const AdminCardImport = () => {
 
                                     <label className="admin-import-field">
                                         <span className="admin-import-field-label">
-                                            Gameplay Value (credits){' '}
+                                            Gameplay Value (Pack Coins){' '}
                                             <span className="admin-import-required">*</span>
                                         </span>
                                         <input

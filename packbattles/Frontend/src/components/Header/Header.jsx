@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import SocialIcon from '../SocialIcon/SocialIcon';
 import logo from '../../assets/img/logo.png';
 import './Header.css';
+import { fmtPackCoins } from '../../utils/currency';
 
 const Header = () => {
     const { user, logout } = useAuth();
@@ -49,6 +50,7 @@ const Header = () => {
                             <li><NavLink activeclassname="active" to="/events">Event</NavLink></li>
                             <li><NavLink activeclassname="active" to="/upgrade">Upgrade</NavLink></li>
                             <li><NavLink activeclassname="active" to="/trade">Trade</NavLink></li>
+                            <li><NavLink activeclassname="active" to="/activity">Activity</NavLink></li>
                         </ul>
 
                         <div className="h-social d-none d-xxl-block ms-auto">
@@ -59,7 +61,7 @@ const Header = () => {
                             {user ? (
                                 <div className="header-user-area">
                                     <Link to="/profile" className='pf-user-link'>
-                                        {user.name} &nbsp;·&nbsp; {user.credits} credits
+                                        {user.name} &nbsp;·&nbsp; {fmtPackCoins(user.credits)}
                                     </Link>
                                     {user.is_admin && (
                                         <Link to="/admin" className="admin-nav-link">Admin</Link>

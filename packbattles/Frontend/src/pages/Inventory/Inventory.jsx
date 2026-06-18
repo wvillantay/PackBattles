@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import StartNow from '../../components/StartNow/StartNow';
 import './Inventory.css';
+import { fmtPackCoins } from '../../utils/currency';
 
 import { API } from '../../api';
 
@@ -95,7 +96,7 @@ const Inventory = () => {
                                     </div>
                                     <div className="inv-card-body">
                                         <p className="inv-card-name">{item.name}</p>
-                                        <span className="inv-card-value">{item.value} credits</span>
+                                        <span className="inv-card-value">{fmtPackCoins(item.value)}</span>
                                     </div>
                                 </div>
                             </div>

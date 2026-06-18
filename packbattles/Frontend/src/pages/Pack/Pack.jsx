@@ -10,6 +10,7 @@ import StartNow from '../../components/StartNow/StartNow';
 import './Pack.css';
 
 import { API } from '../../api';
+import { fmtPackCoins } from '../../utils/currency';
 
 const RARITY_LABEL = {
     common:     'COMMON',
@@ -232,7 +233,7 @@ const Pack = () => {
                             <>
                                 <h2>Pack Opened!</h2>
                                 <p className="pack-result-credits">
-                                    Credits remaining: <strong>{result.credits_remaining}</strong>
+                                    Pack Coins remaining: <strong>{fmtPackCoins(result.credits_remaining)}</strong>
                                 </p>
                             </>
                         )}
@@ -282,7 +283,7 @@ const Pack = () => {
                                             </span>
                                         </div>
                                         <p>{slot.displayCard.name}</p>
-                                        <span className="card-value">{slot.displayCard.value} credits</span>
+                                        <span className="card-value">{fmtPackCoins(slot.displayCard.value)}</span>
                                     </div>
                                 );
                             })}
@@ -337,8 +338,8 @@ const Pack = () => {
                                             disabled={!canAfford}
                                         >
                                             {canAfford
-                                                ? `Open for ${pack.cost} credits`
-                                                : `Not enough credits (need ${pack.cost})`}
+                                                ? `Open for ${fmtPackCoins(pack.cost)}`
+                                                : `Not enough Pack Coins (need ${fmtPackCoins(pack.cost)})`}
                                         </button>
                                     )}
                                 </div>

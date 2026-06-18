@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import { API } from '../../api';
 import './Admin.css';
+import { fmtPackCoins } from '../../utils/currency';
 
 const RARITY_LABEL = {
     ultra_rare: 'Ultra Rare',
@@ -227,7 +228,7 @@ const AdminCompanyInventory = () => {
 
                                                 {/* Gameplay value + compact market hint */}
                                                 <td>
-                                                    <p className="admin-credits">${card.card_value.toFixed(2)}</p>
+                                                    <p className="admin-credits">{fmtPackCoins(card.card_value)}</p>
                                                     {hasMkt && (
                                                         <p className="admin-ci-mkt-hint">
                                                             mkt {card.market_price_currency === 'USD' ? '$' : '€'}

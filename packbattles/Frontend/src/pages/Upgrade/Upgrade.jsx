@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { API } from '../../api';
 import StartNow from '../../components/StartNow/StartNow';
 import './Upgrade.css';
+import { fmtPackCoins } from '../../utils/currency';
 
 const RARITY_LABEL = {
     ultra_rare: 'Ultra Rare',
@@ -232,7 +233,7 @@ const Upgrade = () => {
                                             {RARITY_LABEL[inputCard.rarity] || inputCard.rarity}
                                         </span>
                                         <p className="up-selected-name">{inputCard.name}</p>
-                                        <p className="up-selected-value">${inputCard.value.toFixed(2)}</p>
+                                        <p className="up-selected-value">{fmtPackCoins(inputCard.value)}</p>
                                         {!result && !spinning && (
                                             <button className="up-deselect" onClick={() => setInputCard(null)}>
                                                 ✕ Change
@@ -269,7 +270,7 @@ const Upgrade = () => {
                                             </div>
                                             <div className="up-card-meta">
                                                 {card.quantity > 1 && <span className="up-qty">×{card.quantity}</span>}
-                                                <span className="up-card-value">${card.value.toFixed(2)}</span>
+                                                <span className="up-card-value">{fmtPackCoins(card.value)}</span>
                                             </div>
                                         </div>
                                     ))}
@@ -514,7 +515,7 @@ const Upgrade = () => {
                                             {RARITY_LABEL[targetCard.rarity] || targetCard.rarity}
                                         </span>
                                         <p className="up-selected-name">{targetCard.name}</p>
-                                        <p className="up-selected-value">${targetCard.value.toFixed(2)}</p>
+                                        <p className="up-selected-value">{fmtPackCoins(targetCard.value)}</p>
                                         {!result && !spinning && (
                                             <button className="up-deselect" onClick={() => setTargetCard(null)}>
                                                 ✕ Change
@@ -553,7 +554,7 @@ const Upgrade = () => {
                                                 <span className="up-chance-tag">
                                                     {(card.success_chance * 100).toFixed(3)}%
                                                 </span>
-                                                <span className="up-card-value">${card.value.toFixed(2)}</span>
+                                                <span className="up-card-value">{fmtPackCoins(card.value)}</span>
                                             </div>
                                         </div>
                                     ))}
@@ -575,13 +576,13 @@ const Upgrade = () => {
                             <div className="up-modal-side">
                                 <p className="up-modal-side-label">You risk</p>
                                 <p className="up-modal-card-name">{pendingData.input_card_name}</p>
-                                <p className="up-modal-card-val">${pendingData.input_value?.toFixed(2)}</p>
+                                <p className="up-modal-card-val">{fmtPackCoins(pendingData.input_value)}</p>
                             </div>
                             <div className="up-modal-arrow">→</div>
                             <div className="up-modal-side">
                                 <p className="up-modal-side-label">Target</p>
                                 <p className="up-modal-card-name">{pendingData.target_card_name}</p>
-                                <p className="up-modal-card-val">${pendingData.target_value?.toFixed(2)}</p>
+                                <p className="up-modal-card-val">{fmtPackCoins(pendingData.target_value)}</p>
                             </div>
                         </div>
                         <p className="up-modal-chance">

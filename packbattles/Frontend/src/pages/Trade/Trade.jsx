@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import { API } from '../../api';
 import './Trade.css';
+import { fmtPackCoins } from '../../utils/currency';
 
 const RARITY_LABEL = {
     ultra_rare: 'Ultra Rare',
@@ -145,7 +146,7 @@ const Trade = () => {
                                         <img src={offeredCard.image_url} alt={offeredCard.name} />
                                         <p className="trade-card-name">{offeredCard.name}</p>
                                         <p className="trade-card-rarity">{RARITY_LABEL[offeredCard.rarity] || offeredCard.rarity}</p>
-                                        <p className="trade-card-value">${Number(offeredCard.value).toFixed(2)}</p>
+                                        <p className="trade-card-value">{fmtPackCoins(offeredCard.value)}</p>
                                         <button className="trade-deselect-btn" onClick={() => handleSelectOffered(offeredCard)}>
                                             ✕ Change
                                         </button>
@@ -188,7 +189,7 @@ const Trade = () => {
                                         <img src={selectedReplacement.image_url} alt={selectedReplacement.name} />
                                         <p className="trade-card-name">{selectedReplacement.name}</p>
                                         <p className="trade-card-rarity">{RARITY_LABEL[selectedReplacement.rarity] || selectedReplacement.rarity}</p>
-                                        <p className="trade-card-value">${Number(selectedReplacement.value).toFixed(2)}</p>
+                                        <p className="trade-card-value">{fmtPackCoins(selectedReplacement.value)}</p>
                                         <button className="trade-deselect-btn" onClick={() => setSelectedReplacement(null)}>
                                             ✕ Change
                                         </button>
@@ -243,7 +244,7 @@ const Trade = () => {
                                         )}
                                     </div>
                                     <p className="trade-inv-card-name">{card.name}</p>
-                                    <p className="trade-inv-card-value">${Number(card.value).toFixed(2)}</p>
+                                    <p className="trade-inv-card-value">{fmtPackCoins(card.value)}</p>
                                 </div>
                             ))}
                         </div>
@@ -259,7 +260,7 @@ const Trade = () => {
                             <div className="search-container w-100" data-aos="zoom-in">
                                 <div className="d-flex flex-wrap flex-sm-nowrap align-items-center justify-content-between">
                                     <p className="trade-section-label">
-                                        AVAILABLE REPLACEMENTS — value ≤ ${Number(offeredCard.value).toFixed(2)}
+                                        AVAILABLE REPLACEMENTS — up to {fmtPackCoins(offeredCard.value)}
                                     </p>
                                     <input
                                         type="text"
@@ -291,7 +292,7 @@ const Trade = () => {
                                             <img src={card.image_url} alt={card.name} />
                                         </div>
                                         <p className="trade-inv-card-name">{card.name}</p>
-                                        <p className="trade-inv-card-value">${Number(card.value).toFixed(2)}</p>
+                                        <p className="trade-inv-card-value">{fmtPackCoins(card.value)}</p>
                                     </div>
                                 ))}
                             </div>
@@ -311,14 +312,14 @@ const Trade = () => {
                                 <p className="trade-modal-card-label">You give</p>
                                 <img src={offeredCard.image_url} alt={offeredCard.name} />
                                 <p className="trade-modal-card-name">{offeredCard.name}</p>
-                                <p className="trade-modal-card-value">${Number(offeredCard.value).toFixed(2)}</p>
+                                <p className="trade-modal-card-value">{fmtPackCoins(offeredCard.value)}</p>
                             </div>
                             <div className="trade-modal-arrow">→</div>
                             <div className="trade-modal-card">
                                 <p className="trade-modal-card-label">You receive</p>
                                 <img src={selectedReplacement.image_url} alt={selectedReplacement.name} />
                                 <p className="trade-modal-card-name">{selectedReplacement.name}</p>
-                                <p className="trade-modal-card-value">${Number(selectedReplacement.value).toFixed(2)}</p>
+                                <p className="trade-modal-card-value">{fmtPackCoins(selectedReplacement.value)}</p>
                             </div>
                         </div>
                         <div className="trade-modal-actions">

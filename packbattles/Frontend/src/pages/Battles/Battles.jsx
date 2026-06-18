@@ -7,6 +7,7 @@ import StartNow from '../../components/StartNow/StartNow';
 import './Battles.css';
 
 import { API } from '../../api';
+import { fmtPackCoins } from '../../utils/currency';
 
 const QTY_OPTIONS = [1, 2, 3, 5, 10];
 
@@ -181,7 +182,7 @@ const Battles = () => {
                                                     )}
                                                 </p>
                                             </td>
-                                            <td><p>{battle.total_cost} cr</p></td>
+                                            <td><p>{fmtPackCoins(battle.total_cost)}</p></td>
                                             <td>
                                                 <div className="act-btns">
                                                     {battle.creator_id !== user?.id ? (
@@ -259,7 +260,7 @@ const Battles = () => {
                                 >
                                     <img src={pack.image_url} alt={pack.name} />
                                     <p className="bt-pack-tile-name">{pack.name}</p>
-                                    <p className="bt-pack-tile-cost">{pack.cost} cr</p>
+                                    <p className="bt-pack-tile-cost">{fmtPackCoins(pack.cost)}</p>
                                 </div>
                             ))}
                         </div>
@@ -282,22 +283,22 @@ const Battles = () => {
                                 </div>
 
                                 <div className="bt-modal-cost-row">
-                                    <span>Per pack: <strong>{selectedPack.cost} cr</strong></span>
+                                    <span>Per pack: <strong>{fmtPackCoins(selectedPack.cost)}</strong></span>
                                     <span>Quantity: <strong>×{selectedQty}</strong></span>
                                     <span>
                                         Total cost:{' '}
                                         <strong style={{ color: canAffordCreate ? '#A35BFF' : '#f87171' }}>
-                                            {totalCreateCost} cr
+                                            {fmtPackCoins(totalCreateCost)}
                                         </strong>
                                     </span>
                                     <span>
-                                        Your credits:{' '}
+                                        Your Pack Coins:{' '}
                                         <strong style={{ color: canAffordCreate ? '#A35BFF' : '#f87171' }}>
-                                            {user?.credits}
+                                            {fmtPackCoins(user?.credits)}
                                         </strong>
                                     </span>
                                     {!canAffordCreate && (
-                                        <span className="bt-modal-error">Not enough credits.</span>
+                                        <span className="bt-modal-error">Not enough Pack Coins.</span>
                                     )}
                                 </div>
                             </>
@@ -314,7 +315,7 @@ const Battles = () => {
                                 onClick={handleCreate}
                                 disabled={!selectedPack || !canAffordCreate || creating}
                             >
-                                {creating ? 'Creating...' : `Create Battle (${totalCreateCost} cr)`}
+                                {creating ? 'Creating...' : `Create Battle (${fmtPackCoins(totalCreateCost)})`}
                             </button>
                         </div>
                     </div>
@@ -354,22 +355,22 @@ const Battles = () => {
                             <span>
                                 Entry cost:{' '}
                                 <strong style={{ color: canAffordJoin ? '#A35BFF' : '#f87171' }}>
-                                    {joiningBattle.total_cost} cr
+                                    {fmtPackCoins(joiningBattle.total_cost)}
                                 </strong>
                             </span>
                             {joiningBattle.pack_quantity > 1 && (
                                 <span>
-                                    ({joiningBattle.pack_quantity} × {joiningBattle.pack_cost} cr)
+                                    ({joiningBattle.pack_quantity} × {fmtPackCoins(joiningBattle.pack_cost)})
                                 </span>
                             )}
                             <span>
-                                Your credits:{' '}
+                                Your Pack Coins:{' '}
                                 <strong style={{ color: canAffordJoin ? '#A35BFF' : '#f87171' }}>
-                                    {user?.credits}
+                                    {fmtPackCoins(user?.credits)}
                                 </strong>
                             </span>
                             {!canAffordJoin && (
-                                <span className="bt-modal-error">Not enough credits.</span>
+                                <span className="bt-modal-error">Not enough Pack Coins.</span>
                             )}
                         </div>
 
@@ -384,7 +385,7 @@ const Battles = () => {
                                 onClick={handleJoin}
                                 disabled={!canAffordJoin || joining}
                             >
-                                {joining ? 'Joining...' : `Join for ${joiningBattle.total_cost} cr`}
+                                {joining ? 'Joining...' : `Join for ${fmtPackCoins(joiningBattle.total_cost)}`}
                             </button>
                         </div>
                     </div>

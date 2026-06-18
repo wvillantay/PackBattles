@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import './Admin.css';
 
 import { API } from '../../api';
+import { fmtPackCoins } from '../../utils/currency';
 
 const TX_LABEL = {
     pack_open_spend:         'Pack Opened',
@@ -110,12 +111,12 @@ const AdminTransactions = () => {
                                             <td><p>{tx.admin_name || '—'}</p></td>
                                             <td>
                                                 <p className={isPos ? 'admin-tx-pos' : 'admin-tx-neg'}>
-                                                    {sign}{absAmt} cr
+                                                    {sign}{fmtPackCoins(absAmt)}
                                                 </p>
                                             </td>
                                             <td>
                                                 <p className="admin-tx-balance">
-                                                    {tx.balance_after != null ? `${tx.balance_after} cr` : '—'}
+                                                    {tx.balance_after != null ? fmtPackCoins(tx.balance_after) : '—'}
                                                 </p>
                                             </td>
                                         </tr>

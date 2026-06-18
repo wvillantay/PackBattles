@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import './Admin.css';
+import { fmtPackCoins, fmtPackCoinsShort } from '../../utils/currency';
 
 import { API } from '../../api';
 
@@ -77,7 +78,7 @@ const AdminUserDetail = () => {
                 amount:     '',
                 reason:     '',
                 submitting: false,
-                success:    `Done. New balance: ${res.data.new_balance} credits.`,
+                success:    `Done. New balance: ${fmtPackCoinsShort(res.data.new_balance)}.`,
                 error:      '',
             });
             refresh();
@@ -131,7 +132,7 @@ const AdminUserDetail = () => {
                         <div className="admin-stat-row">
                             <div className="admin-stat-card">
                                 <span className="admin-stat-value admin-stat-credits">{user.credits}</span>
-                                <span className="admin-stat-label">Credits</span>
+                                <span className="admin-stat-label">Pack Coins</span>
                             </div>
                             <div className="admin-stat-card">
                                 <span className="admin-stat-value admin-stat-wins">{user.wins}</span>
@@ -237,14 +238,14 @@ const AdminUserDetail = () => {
                                                         <td>
                                                             <p className="admin-total">
                                                                 {b.my_total != null
-                                                                    ? `${Number(b.my_total).toFixed(2)} cr`
+                                                                    ? fmtPackCoinsShort(b.my_total)
                                                                     : '—'}
                                                             </p>
                                                         </td>
                                                         <td>
                                                             <p className="admin-total">
                                                                 {b.their_total != null
-                                                                    ? `${Number(b.their_total).toFixed(2)} cr`
+                                                                    ? fmtPackCoinsShort(b.their_total)
                                                                     : '—'}
                                                             </p>
                                                         </td>
@@ -259,7 +260,7 @@ const AdminUserDetail = () => {
 
                         {/* Credit history */}
                         <div className="admin-section">
-                            <h3 className="admin-section-title">Credit History</h3>
+                            <h3 className="admin-section-title">Pack Coin History</h3>
 
                             {transactions.length === 0 ? (
                                 <p className="admin-empty">No transactions yet.</p>
@@ -293,12 +294,12 @@ const AdminUserDetail = () => {
                                                         </td>
                                                         <td>
                                                             <p className={isPos ? 'admin-tx-pos' : 'admin-tx-neg'}>
-                                                                {sign}{absAmt} cr
+                                                                {sign}{fmtPackCoins(absAmt)}
                                                             </p>
                                                         </td>
                                                         <td>
                                                             <p className="admin-tx-balance">
-                                                                {tx.balance_after != null ? `${tx.balance_after} cr` : '—'}
+                                                                {tx.balance_after != null ? fmtPackCoins(tx.balance_after) : '—'}
                                                             </p>
                                                         </td>
                                                     </tr>

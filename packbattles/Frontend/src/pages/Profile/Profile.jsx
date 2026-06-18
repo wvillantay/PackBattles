@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import './Profile.css';
 
 import { API } from '../../api';
+import { fmtPackCoins, fmtPackCoinsShort } from '../../utils/currency';
 
 const Profile = () => {
     const { token, user } = useAuth();
@@ -89,8 +90,8 @@ const Profile = () => {
                 {!statsLoading && stats && (
                     <div className="pf-stats-row" data-aos="fade-up">
                         <div className="pf-stat-card">
-                            <span className="pf-stat-value pf-stat-credits">{stats.credits}</span>
-                            <span className="pf-stat-label">Credits</span>
+                            <span className="pf-stat-value pf-stat-credits">{fmtPackCoins(stats.credits)}</span>
+                            <span className="pf-stat-label">Pack Coins</span>
                         </div>
                         <div className="pf-stat-card">
                             <span className="pf-stat-value pf-stat-win">{stats.wins}</span>
@@ -179,14 +180,14 @@ const Profile = () => {
                                                     <td>
                                                         <p className="pf-total">
                                                             {b.my_total != null
-                                                                ? `${Number(b.my_total).toFixed(2)} cr`
+                                                                ? fmtPackCoinsShort(b.my_total)
                                                                 : '—'}
                                                         </p>
                                                     </td>
                                                     <td>
                                                         <p className="pf-total">
                                                             {b.their_total != null
-                                                                ? `${Number(b.their_total).toFixed(2)} cr`
+                                                                ? fmtPackCoinsShort(b.their_total)
                                                                 : '—'}
                                                         </p>
                                                     </td>
@@ -210,7 +211,7 @@ const Profile = () => {
 
                 {activeTab === 'transactions' && (
                     <div className="pf-credit-history">
-                        <h3 className="pf-section-title">Credit History</h3>
+                        <h3 className="pf-section-title">Pack Coin History</h3>
 
                         {txLoading && <p className="pf-status">Loading credit history...</p>}
                         {txError   && <p className="pf-error">{txError}</p>}
@@ -249,12 +250,12 @@ const Profile = () => {
                                                     </td>
                                                     <td>
                                                         <p className={isPositive ? 'pf-tx-amount-pos' : 'pf-tx-amount-neg'}>
-                                                            {sign}{absAmt} cr
+                                                            {sign}{fmtPackCoins(absAmt)}
                                                         </p>
                                                     </td>
                                                     <td>
                                                         <p className="pf-tx-balance">
-                                                            {tx.balance_after != null ? `${tx.balance_after} cr` : '—'}
+                                                            {tx.balance_after != null ? fmtPackCoins(tx.balance_after) : '—'}
                                                         </p>
                                                     </td>
                                                 </tr>

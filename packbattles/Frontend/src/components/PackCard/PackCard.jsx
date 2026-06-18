@@ -1,5 +1,6 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
+import { fmtPackCoins } from '../../utils/currency'
 
 import kart1 from "../../assets/img/karte1 2.png";
 // import kart1 from "../../assets/img/kart1"
@@ -21,7 +22,7 @@ const PackCard = ({text, img, price , url, active}) => {
           
         <img className='pack-img' src={img} alt="Pack card image" />
         <p>{text}</p>
-        <Link to={url}>${price}</Link>
+        <Link to={url}>{fmtPackCoins(price)}</Link>
 
          
             <img className='line-img line-d' src={lineDown} alt="carve line" />

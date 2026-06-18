@@ -65,7 +65,7 @@ const AdminUsers = () => {
                                 <tr>
                                     <th>NAME</th>
                                     <th>EMAIL</th>
-                                    <th>CREDITS</th>
+                                    <th>PACK COINS</th>
                                     <th>WINS</th>
                                     <th>LOSSES</th>
                                     <th>JOINED</th>

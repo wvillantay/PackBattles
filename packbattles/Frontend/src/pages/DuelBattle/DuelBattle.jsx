@@ -7,6 +7,7 @@ import PlayerProfileCard from '../../components/PlayerProfileCard/PlayerProfileC
 import './DuelBattle.css';
 
 import { API } from '../../api';
+import { fmtPackCoins, fmtPackCoinsShort } from '../../utils/currency';
 
 const RARITY_COLOR = {
     common:     '#9ca3af',
@@ -419,7 +420,7 @@ const DuelBattle = () => {
                     <p className="db-status-text db-status-waiting">Battle Cancelled</p>
                     <p className="db-cancelled-hint">
                         {isCreator
-                            ? 'Your battle was cancelled and your credits have been refunded.'
+                            ? 'Your battle was cancelled and your Pack Coins have been refunded.'
                             : 'The creator cancelled this battle before anyone joined.'}
                     </p>
                     <Link to="/battles" className="db-back-link">Back to Battles</Link>
@@ -470,7 +471,7 @@ const DuelBattle = () => {
                                         {card.rarity.replace('_', ' ').toUpperCase()}
                                     </span>
                                     <p className="db-card-name">{card.name}</p>
-                                    <span className="db-card-value">{card.value} cr</span>
+                                    <span className="db-card-value">{fmtPackCoinsShort(card.value)}</span>
                                 </>
                             ) : isSpinning ? (
                                 <>
@@ -514,7 +515,7 @@ const DuelBattle = () => {
                             <ModeCard icon="../imgs/Group 40146.svg" heading={`×${battle.pack_quantity}`} name="Packs" />
                         </div>
                         <div className="item">
-                            <ModeCard icon="../imgs/Group 40148.svg" heading={`${battle.total_cost} cr`} name="Total Cost" />
+                            <ModeCard icon="../imgs/Group 40148.svg" heading={fmtPackCoins(battle.total_cost)} name="Total Cost" />
                         </div>
                     </div>
 
@@ -592,8 +593,8 @@ const DuelBattle = () => {
                                                     {committedCount > 0 && (
                                                         <div className="db-total-badge">
                                                             {revealDone
-                                                                ? `${battle.creator_total} cr`
-                                                                : `${runningCreatorTotal} cr...`}
+                                                                ? fmtPackCoinsShort(battle.creator_total)
+                                                                : `${fmtPackCoinsShort(runningCreatorTotal)}...`}
                                                         </div>
                                                     )}
                                                     {renderCardGrid('creator')}
@@ -611,7 +612,7 @@ const DuelBattle = () => {
                                     {revealDone ? (
                                         <div className="vs-card">
                                             <img className="icon" src="./imgs/Group 40124.png" alt="" />
-                                            <h4>{totalAwarded} cr</h4>
+                                            <h4>{fmtPackCoins(totalAwarded)}</h4>
                                             <span>Total Amount Awarded</span>
                                         </div>
                                     ) : (
@@ -643,7 +644,7 @@ const DuelBattle = () => {
                                                     <p className="db-waiting-hint">
                                                         Anyone can join from the{' '}
                                                         <Link to="/battles" className="db-battles-link">battles list</Link>
-                                                        {' '}for {battle.total_cost} cr
+                                                        {' '}for {fmtPackCoins(battle.total_cost)}
                                                     </p>
                                                     {isCreator && (
                                                         <>
@@ -671,10 +672,10 @@ const DuelBattle = () => {
                                                             >
                                                                 {joining
                                                                     ? 'Joining...'
-                                                                    : `Join Battle for ${battle.total_cost} cr`}
+                                                                    : `Join Battle for ${fmtPackCoins(battle.total_cost)}`}
                                                             </button>
                                                             {!canAffordJoin && (
-                                                                <p className="db-join-afford">Not enough credits to join.</p>
+                                                                <p className="db-join-afford">Not enough Pack Coins to join.</p>
                                                             )}
                                                         </>
                                                     )}
@@ -694,8 +695,8 @@ const DuelBattle = () => {
                                                 {committedCount > 0 && (
                                                     <div className="db-total-badge">
                                                         {revealDone
-                                                            ? `${battle.opponent_total} cr`
-                                                            : `${runningOpponentTotal} cr...`}
+                                                            ? fmtPackCoinsShort(battle.opponent_total)
+                                                            : `${fmtPackCoinsShort(runningOpponentTotal)}...`}
                                                     </div>
                                                 )}
                                                 {renderCardGrid('opponent')}
@@ -720,7 +721,7 @@ const DuelBattle = () => {
                         <div className="players-vs text-center my-0 mb-0">
                             <div className="vs-card">
                                 <img className="icon" src="./imgs/Group 40124.png" alt="" />
-                                <h4>{totalAwarded} cr</h4>
+                                <h4>{fmtPackCoins(totalAwarded)}</h4>
                                 <span>Total Amount Awarded</span>
                             </div>
                         </div>
