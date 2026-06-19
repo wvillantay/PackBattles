@@ -10,16 +10,20 @@ import { fmtPackCoins, fmtPackCoinsShort } from '../../utils/currency';
 const Profile = () => {
     const { token, user } = useAuth();
 
-    const [stats,          setStats]          = useState(null);
-    const [battles,        setBattles]        = useState([]);
-    const [transactions,   setTransactions]   = useState([]);
-    const [statsLoading,   setStatsLoading]   = useState(true);
-    const [battlesLoading, setBattlesLoading] = useState(true);
-    const [txLoading,      setTxLoading]      = useState(true);
-    const [statsError,     setStatsError]     = useState('');
-    const [battlesError,   setBattlesError]   = useState('');
-    const [txError,        setTxError]        = useState('');
-    const [activeTab,      setActiveTab]      = useState('battles');
+    const [stats,            setStats]            = useState(null);
+    const [battles,          setBattles]          = useState([]);
+    const [transactions,     setTransactions]     = useState([]);
+    const [shipments,        setShipments]        = useState([]);
+    const [statsLoading,     setStatsLoading]     = useState(true);
+    const [battlesLoading,   setBattlesLoading]   = useState(true);
+    const [txLoading,        setTxLoading]        = useState(true);
+    const [shipmentsLoading, setShipmentsLoading] = useState(false);
+    const [shipmentsLoaded,  setShipmentsLoaded]  = useState(false);
+    const [statsError,       setStatsError]       = useState('');
+    const [battlesError,     setBattlesError]     = useState('');
+    const [txError,          setTxError]          = useState('');
+    const [shipmentsError,   setShipmentsError]   = useState('');
+    const [activeTab,        setActiveTab]        = useState('battles');
 
     useEffect(() => {
         axios
@@ -41,6 +45,19 @@ const Profile = () => {
             .catch(() => setTxError('Failed to load credit history.'))
             .finally(() => setTxLoading(false));
     }, [token]);
+
+    // Lazy-load shipments when the Shipments tab is first opened
+    useEffect(() => {
+        if (activeTab === 'shipments' && !shipmentsLoaded) {
+            setShipmentsLoading(true);
+            setShipmentsError('');
+            axios
+                .get(`${API}/api/me/ship-requests`, { headers: { Authorization: `Bearer ${token}` } })
+                .then(res => { setShipments(res.data); setShipmentsLoaded(true); })
+                .catch(() => setShipmentsError('Failed to load shipment history.'))
+                .finally(() => setShipmentsLoading(false));
+        }
+    }, [activeTab, token, shipmentsLoaded]);
 
     const TX_LABEL = {
         pack_open_spend:         'Pack Opened',
@@ -122,6 +139,12 @@ const Profile = () => {
                         onClick={() => setActiveTab('transactions')}
                     >
                         Credit History
+                    </button>
+                    <button
+                        className={`pf-tab-btn${activeTab === 'shipments' ? ' pf-tab-active' : ''}`}
+                        onClick={() => setActiveTab('shipments')}
+                    >
+                        Shipments
                     </button>
                 </div>
 
@@ -263,6 +286,55 @@ const Profile = () => {
                                         })}
                                     </tbody>
                                 </table>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {activeTab === 'shipments' && (
+                    <div className="pf-shipments">
+                        <h3 className="pf-section-title">Shipment History</h3>
+
+                        {shipmentsLoading && <p className="pf-status">Loading shipments...</p>}
+                        {shipmentsError   && <p className="pf-error">{shipmentsError}</p>}
+
+                        {!shipmentsLoading && !shipmentsError && shipments.length === 0 && (
+                            <p className="pf-status">No shipment requests yet.</p>
+                        )}
+
+                        {shipments.length > 0 && (
+                            <div className="pf-ship-list">
+                                {shipments.map(s => (
+                                    <div key={s.request_id} className="pf-ship-row">
+                                        {s.card_image_url && (
+                                            <img
+                                                className="pf-ship-thumb"
+                                                src={s.card_image_url}
+                                                alt={s.card_name}
+                                            />
+                                        )}
+                                        <div className="pf-ship-info">
+                                            <p className="pf-ship-name">{s.card_name}</p>
+                                            <span className={`pf-ship-badge pf-ship-badge-${s.status}`}>
+                                                {s.status.charAt(0).toUpperCase() + s.status.slice(1)}
+                                            </span>
+                                            <p className="pf-ship-date">
+                                                Submitted {formatDate(s.created_at)}
+                                                {s.shipped_at   && ` · Shipped ${formatDate(s.shipped_at)}`}
+                                                {s.rejected_at  && ` · Rejected ${formatDate(s.rejected_at)}`}
+                                            </p>
+                                            {(s.tracking_number || s.carrier) && (
+                                                <p className="pf-ship-tracking">
+                                                    {s.carrier && <span className="pf-ship-carrier">{s.carrier}</span>}
+                                                    {s.tracking_number && <span className="pf-ship-tn">{s.tracking_number}</span>}
+                                                </p>
+                                            )}
+                                            {s.admin_note && s.status === 'rejected' && (
+                                                <p className="pf-ship-note">Note: {s.admin_note}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         )}
                     </div>

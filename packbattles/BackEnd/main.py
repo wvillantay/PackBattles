@@ -2698,6 +2698,8 @@ def ship_request_list():
             "phone":            r.get("phone"),
             "status":           r.get("status", ""),
             "admin_note":       r.get("admin_note"),
+            "tracking_number":  r.get("tracking_number"),
+            "carrier":          r.get("carrier"),
             "created_at":       r["created_at"].isoformat() if r.get("created_at") else None,
             "shipped_at":       r["shipped_at"].isoformat() if r.get("shipped_at") else None,
             "rejected_at":      r["rejected_at"].isoformat() if r.get("rejected_at") else None,
@@ -2740,6 +2742,8 @@ def admin_ship_request_list():
             "phone":            r.get("phone"),
             "status":           r.get("status", ""),
             "admin_note":       r.get("admin_note"),
+            "tracking_number":  r.get("tracking_number"),
+            "carrier":          r.get("carrier"),
             "user_id":          str(r["user_id"]) if r.get("user_id") else None,
             "user_name":        user.get("name", "Unknown"),
             "user_email":       user.get("email", ""),
@@ -2799,6 +2803,53 @@ def admin_ship_request_ship(request_id):
         return jsonify({"error": "Ship failed. Please try again."}), 500
 
     return jsonify({"ok": True, "request_id": request_id, "status": "shipped"})
+
+
+@app.route("/api/admin/ship-requests/<request_id>/tracking", methods=["PATCH"])
+@require_admin
+def admin_ship_request_tracking(request_id):
+    try:
+        req_oid = ObjectId(request_id)
+    except Exception:
+        return jsonify({"error": "Invalid request_id"}), 400
+
+    ship_req = mongo.db.ship_requests.find_one({"_id": req_oid})
+    if not ship_req:
+        return jsonify({"error": "Ship request not found"}), 404
+    if ship_req["status"] != "shipped":
+        return jsonify({"error": "Tracking can only be added to shipped requests."}), 400
+
+    data = request.get_json(silent=True) or {}
+
+    has_tracking = "tracking_number" in data
+    has_carrier  = "carrier" in data
+
+    if not has_tracking and not has_carrier:
+        return jsonify({"error": "Provide at least one of tracking_number or carrier."}), 400
+
+    tracking_number = str(data["tracking_number"]).strip()[:200] if has_tracking else None
+    carrier         = str(data["carrier"]).strip()[:100]         if has_carrier  else None
+
+    # Guard: if both are provided and both are empty, do not allow clearing everything
+    if has_tracking and has_carrier and not tracking_number and not carrier:
+        return jsonify({"error": "At least one of tracking_number or carrier must be non-empty."}), 400
+
+    now        = datetime.now(timezone.utc)
+    set_fields = {"updated_at": now}
+    if tracking_number is not None:
+        set_fields["tracking_number"] = tracking_number
+    if carrier is not None:
+        set_fields["carrier"] = carrier
+
+    mongo.db.ship_requests.update_one({"_id": req_oid}, {"$set": set_fields})
+
+    updated = mongo.db.ship_requests.find_one({"_id": req_oid})
+    return jsonify({
+        "ok":             True,
+        "request_id":     request_id,
+        "tracking_number": updated.get("tracking_number"),
+        "carrier":         updated.get("carrier"),
+    })
 
 
 @app.route("/api/admin/ship-requests/<request_id>/reject", methods=["PATCH"])

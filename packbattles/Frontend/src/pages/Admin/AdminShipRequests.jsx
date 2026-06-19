@@ -25,6 +25,12 @@ const AdminShipRequests = () => {
     const [rowBusy, setRowBusy]   = useState({});
     const [rowError, setRowError] = useState({});
 
+    // Per-row tracking state (keyed by request_id)
+    const [trackingForm,    setTrackingForm]    = useState({});
+    const [trackingBusy,    setTrackingBusy]    = useState({});
+    const [trackingError,   setTrackingError]   = useState({});
+    const [trackingSuccess, setTrackingSuccess] = useState({});
+
     const fetchRequests = (status) => {
         setLoading(true);
         setError('');
@@ -33,7 +39,22 @@ const AdminShipRequests = () => {
             .get(`${API}/api/admin/ship-requests${params}`, {
                 headers: { Authorization: `Bearer ${token}` },
             })
-            .then((res) => setRequests(res.data))
+            .then((res) => {
+                setRequests(res.data);
+                // Seed tracking form for shipped rows
+                setTrackingForm((prev) => {
+                    const next = { ...prev };
+                    res.data.forEach((r) => {
+                        if (r.status === 'shipped' && !next[r.request_id]) {
+                            next[r.request_id] = {
+                                tracking_number: r.tracking_number || '',
+                                carrier:         r.carrier         || '',
+                            };
+                        }
+                    });
+                    return next;
+                });
+            })
             .catch(() => setError('Failed to load ship requests.'))
             .finally(() => setLoading(false));
     };
@@ -96,6 +117,48 @@ const AdminShipRequests = () => {
             setRejectError(err?.response?.data?.error || 'Reject failed. Please try again.');
         } finally {
             setRejectLoading(false);
+        }
+    };
+
+    const setTrackingField = (reqId, field) => (e) =>
+        setTrackingForm((prev) => ({
+            ...prev,
+            [reqId]: { ...(prev[reqId] || {}), [field]: e.target.value },
+        }));
+
+    const handleTrackingSave = async (req) => {
+        const form = trackingForm[req.request_id] || {};
+        const tn   = (form.tracking_number || '').trim();
+        const cr   = (form.carrier         || '').trim();
+        if (!tn && !cr) {
+            setTrackingError((p) => ({ ...p, [req.request_id]: 'Enter a tracking number or carrier.' }));
+            return;
+        }
+        setTrackingBusy((p)   => ({ ...p, [req.request_id]: true  }));
+        setTrackingError((p)  => ({ ...p, [req.request_id]: ''    }));
+        setTrackingSuccess((p)=> ({ ...p, [req.request_id]: ''    }));
+        try {
+            await axios.patch(
+                `${API}/api/admin/ship-requests/${req.request_id}/tracking`,
+                { tracking_number: tn, carrier: cr },
+                { headers: { Authorization: `Bearer ${token}` } },
+            );
+            setTrackingSuccess((p) => ({ ...p, [req.request_id]: 'Tracking saved.' }));
+            // Update the row in-place so the table reflects new values
+            setRequests((prev) =>
+                prev.map((r) =>
+                    r.request_id === req.request_id
+                        ? { ...r, tracking_number: tn, carrier: cr }
+                        : r,
+                ),
+            );
+        } catch (err) {
+            setTrackingError((p) => ({
+                ...p,
+                [req.request_id]: err?.response?.data?.error || 'Save failed.',
+            }));
+        } finally {
+            setTrackingBusy((p) => ({ ...p, [req.request_id]: false }));
         }
     };
 
@@ -223,6 +286,41 @@ const AdminShipRequests = () => {
                                                         >
                                                             Reject
                                                         </button>
+                                                    </div>
+                                                ) : req.status === 'shipped' ? (
+                                                    <div className="admin-sr-tracking-wrap">
+                                                        <p className="admin-sr-tracking-label">
+                                                            {req.tracking_number || req.carrier ? 'Edit Tracking' : 'Add Tracking'}
+                                                        </p>
+                                                        <input
+                                                            className="admin-sr-tracking-input"
+                                                            type="text"
+                                                            placeholder="Carrier (e.g. USPS)"
+                                                            value={trackingForm[req.request_id]?.carrier ?? ''}
+                                                            onChange={setTrackingField(req.request_id, 'carrier')}
+                                                            disabled={trackingBusy[req.request_id]}
+                                                        />
+                                                        <input
+                                                            className="admin-sr-tracking-input"
+                                                            type="text"
+                                                            placeholder="Tracking number"
+                                                            value={trackingForm[req.request_id]?.tracking_number ?? ''}
+                                                            onChange={setTrackingField(req.request_id, 'tracking_number')}
+                                                            disabled={trackingBusy[req.request_id]}
+                                                        />
+                                                        <button
+                                                            className="admin-sr-tracking-save-btn"
+                                                            onClick={() => handleTrackingSave(req)}
+                                                            disabled={trackingBusy[req.request_id]}
+                                                        >
+                                                            {trackingBusy[req.request_id] ? 'Saving…' : 'Save'}
+                                                        </button>
+                                                        {trackingError[req.request_id] && (
+                                                            <p className="admin-sr-tracking-error">{trackingError[req.request_id]}</p>
+                                                        )}
+                                                        {trackingSuccess[req.request_id] && (
+                                                            <p className="admin-sr-tracking-success">{trackingSuccess[req.request_id]}</p>
+                                                        )}
                                                     </div>
                                                 ) : (
                                                     <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '1.2rem' }}>—</span>
