@@ -327,20 +327,31 @@ def open_pack(pack_id):
 def get_inventory():
     RARITY_ORDER = {"ultra_rare": 0, "rare": 1, "uncommon": 2, "common": 3}
 
-    rows = mongo.db.inventory.find({"user_id": ObjectId(g.user_id)})
+    rows = list(mongo.db.inventory.find({"user_id": ObjectId(g.user_id)}))
+
+    # Batch company_inventory lookup so we can compute can_ship without N+1 queries
+    card_ids = [row["card_id"] for row in rows]
+    ci_map = {}
+    if card_ids:
+        for entry in mongo.db.company_inventory.find({"card_id": {"$in": card_ids}}):
+            ci_map[str(entry["card_id"])] = entry
 
     result = []
     for row in rows:
         card = mongo.db.cards.find_one({"_id": row["card_id"]})
         if card:
+            ci       = ci_map.get(str(row["card_id"]), {})
+            can_ship = bool(ci.get("fulfillable") and ci.get("available_quantity", 0) > 0)
             result.append({
-                "inventory_id": str(row["_id"]),
-                "card_id":      str(card["_id"]),
-                "name":         card["name"],
-                "image_url":    card["image_url"],
-                "rarity":       card["rarity"],
-                "value":        card["value"],
-                "quantity":     row["quantity"],
+                "inventory_id":      str(row["_id"]),
+                "card_id":           str(card["_id"]),
+                "name":              card["name"],
+                "image_url":         card["image_url"],
+                "rarity":            card["rarity"],
+                "value":             card["value"],
+                "quantity":          row["quantity"],
+                "withdrawal_pending": row.get("withdrawal_pending", False),
+                "can_ship":          can_ship,
             })
 
     result.sort(key=lambda x: (RARITY_ORDER.get(x["rarity"], 99), x["name"]))
@@ -1146,6 +1157,8 @@ def exchange_confirm():
     )
     if not user_inv:
         return jsonify({"error": "You do not own this card"}), 400
+    if user_inv.get("withdrawal_pending"):
+        return jsonify({"error": "This card has a pending shipment request and cannot be traded."}), 400
 
     company_rec = mongo.db.company_inventory.find_one({"card_id": replacement_oid})
     if not company_rec:
@@ -1344,6 +1357,8 @@ def upgrade_init():
     )
     if not owns:
         return jsonify({"error": "You do not own this card"}), 400
+    if owns.get("withdrawal_pending"):
+        return jsonify({"error": "This card has a pending shipment request and cannot be upgraded."}), 400
 
     company_rec = mongo.db.company_inventory.find_one({"card_id": target_oid})
     if not company_rec:
@@ -2522,6 +2537,275 @@ def activity_feed():
                         "text": f"beat {loser_name} in a battle", "ts": ts})
 
     return jsonify(out)
+
+
+# ---------------------------------------------------------------------------
+# Ship Request routes
+# ---------------------------------------------------------------------------
+
+@app.route("/api/me/ship-requests", methods=["POST"])
+@require_auth
+def ship_request_submit():
+    data             = request.get_json(silent=True) or {}
+    card_id_str      = data.get("card_id", "")
+    shipping_address = str(data.get("shipping_address", "")).strip()
+
+    try:
+        card_oid = ObjectId(card_id_str)
+    except Exception:
+        return jsonify({"error": "Invalid card_id"}), 400
+
+    if not shipping_address:
+        return jsonify({"error": "shipping_address is required"}), 400
+
+    uid = ObjectId(g.user_id)
+
+    # Pre-checks
+    inv_row = mongo.db.inventory.find_one({"user_id": uid, "card_id": card_oid})
+    if not inv_row or inv_row.get("quantity", 0) < 1:
+        return jsonify({"error": "You do not own this card"}), 400
+    if inv_row.get("withdrawal_pending"):
+        return jsonify({"error": "A shipment request is already pending for this card"}), 400
+
+    ci = mongo.db.company_inventory.find_one({"card_id": card_oid})
+    if not ci:
+        return jsonify({"error": "This card is not available for shipment"}), 400
+    if not ci.get("fulfillable"):
+        return jsonify({"error": "This card is not currently fulfillable"}), 400
+    if ci.get("available_quantity", 0) <= 0:
+        return jsonify({"error": "This card is out of stock"}), 400
+
+    if mongo.db.ship_requests.find_one({"user_id": uid, "card_id": card_oid, "status": "pending"}):
+        return jsonify({"error": "A shipment request is already pending for this card"}), 400
+
+    card = mongo.db.cards.find_one({"_id": card_oid})
+    if not card:
+        return jsonify({"error": "Card not found"}), 404
+
+    now     = datetime.now(timezone.utc)
+    inv_oid = inv_row["_id"]
+    inserted_id = None
+
+    try:
+        with mongo.db.client.start_session() as session:
+            with session.start_transaction():
+                # 1. Decrement company available_quantity
+                ci_result = mongo.db.company_inventory.update_one(
+                    {"card_id": card_oid, "available_quantity": {"$gt": 0}},
+                    {"$inc": {"available_quantity": -1}},
+                    session=session,
+                )
+                if ci_result.matched_count == 0:
+                    raise RuntimeError("out_of_stock")
+
+                # 2. Set withdrawal_pending = true on user inventory
+                inv_result = mongo.db.inventory.update_one(
+                    {"_id": inv_oid, "withdrawal_pending": {"$ne": True}},
+                    {"$set": {"withdrawal_pending": True}},
+                    session=session,
+                )
+                if inv_result.matched_count == 0:
+                    raise RuntimeError("already_pending")
+
+                # 3. Insert ship_request document
+                insert_result = mongo.db.ship_requests.insert_one({
+                    "user_id":          uid,
+                    "card_id":          card_oid,
+                    "inventory_id":     inv_oid,
+                    "card_name":        card["name"],
+                    "card_image_url":   card.get("image_url", ""),
+                    "shipping_address": shipping_address,
+                    "status":           "pending",
+                    "admin_note":       None,
+                    "created_at":       now,
+                    "updated_at":       now,
+                    "shipped_at":       None,
+                    "rejected_at":      None,
+                }, session=session)
+                inserted_id = insert_result.inserted_id
+
+    except RuntimeError as exc:
+        msg = str(exc)
+        if "out_of_stock" in msg:
+            return jsonify({"error": "This card is out of stock"}), 409
+        if "already_pending" in msg:
+            return jsonify({"error": "A shipment request is already pending for this card"}), 409
+        return jsonify({"error": "Request failed. Please try again."}), 500
+    except Exception:
+        return jsonify({"error": "Request failed. Please try again."}), 500
+
+    return jsonify({"ok": True, "request_id": str(inserted_id), "card_name": card["name"]})
+
+
+@app.route("/api/me/ship-requests", methods=["GET"])
+@require_auth
+def ship_request_list():
+    uid      = ObjectId(g.user_id)
+    requests = list(mongo.db.ship_requests.find({"user_id": uid}).sort("created_at", -1))
+
+    result = []
+    for r in requests:
+        result.append({
+            "request_id":       str(r["_id"]),
+            "card_id":          str(r["card_id"]),
+            "card_name":        r.get("card_name", ""),
+            "card_image_url":   r.get("card_image_url", ""),
+            "shipping_address": r.get("shipping_address", ""),
+            "status":           r.get("status", ""),
+            "admin_note":       r.get("admin_note"),
+            "created_at":       r["created_at"].isoformat() if r.get("created_at") else None,
+            "shipped_at":       r["shipped_at"].isoformat() if r.get("shipped_at") else None,
+            "rejected_at":      r["rejected_at"].isoformat() if r.get("rejected_at") else None,
+        })
+
+    return jsonify(result)
+
+
+@app.route("/api/admin/ship-requests", methods=["GET"])
+@require_admin
+def admin_ship_request_list():
+    status_filter = request.args.get("status", "").strip()
+    query         = {"status": status_filter} if status_filter else {}
+
+    requests = list(mongo.db.ship_requests.find(query).sort("created_at", -1))
+
+    # Batch user lookup
+    user_ids  = list({r["user_id"] for r in requests if r.get("user_id")})
+    users_map = {
+        str(u["_id"]): u
+        for u in mongo.db.users.find({"_id": {"$in": user_ids}})
+    }
+
+    result = []
+    for r in requests:
+        user = users_map.get(str(r.get("user_id")), {})
+        result.append({
+            "request_id":       str(r["_id"]),
+            "card_id":          str(r["card_id"]),
+            "card_name":        r.get("card_name", ""),
+            "card_image_url":   r.get("card_image_url", ""),
+            "shipping_address": r.get("shipping_address", ""),
+            "status":           r.get("status", ""),
+            "admin_note":       r.get("admin_note"),
+            "user_id":          str(r["user_id"]) if r.get("user_id") else None,
+            "user_name":        user.get("name", "Unknown"),
+            "user_email":       user.get("email", ""),
+            "created_at":       r["created_at"].isoformat() if r.get("created_at") else None,
+            "updated_at":       r["updated_at"].isoformat() if r.get("updated_at") else None,
+            "shipped_at":       r["shipped_at"].isoformat() if r.get("shipped_at") else None,
+            "rejected_at":      r["rejected_at"].isoformat() if r.get("rejected_at") else None,
+        })
+
+    return jsonify(result)
+
+
+@app.route("/api/admin/ship-requests/<request_id>/ship", methods=["PATCH"])
+@require_admin
+def admin_ship_request_ship(request_id):
+    try:
+        req_oid = ObjectId(request_id)
+    except Exception:
+        return jsonify({"error": "Invalid request_id"}), 400
+
+    ship_req = mongo.db.ship_requests.find_one({"_id": req_oid})
+    if not ship_req:
+        return jsonify({"error": "Ship request not found"}), 404
+    if ship_req["status"] != "pending":
+        return jsonify({"error": f"Request is already in terminal status: {ship_req['status']}"}), 400
+
+    now     = datetime.now(timezone.utc)
+    inv_oid  = ship_req["inventory_id"]
+
+    try:
+        with mongo.db.client.start_session() as session:
+            with session.start_transaction():
+                # 1. Update status — filter on "pending" guards against double-ship
+                req_result = mongo.db.ship_requests.update_one(
+                    {"_id": req_oid, "status": "pending"},
+                    {"$set": {"status": "shipped", "shipped_at": now, "updated_at": now}},
+                    session=session,
+                )
+                if req_result.matched_count == 0:
+                    raise RuntimeError("already_shipped")
+
+                # 2. Handle user inventory: decrement or delete
+                inv_row = mongo.db.inventory.find_one({"_id": inv_oid}, session=session)
+                if inv_row:
+                    if inv_row.get("quantity", 1) > 1:
+                        mongo.db.inventory.update_one(
+                            {"_id": inv_oid},
+                            {"$inc": {"quantity": -1}, "$set": {"withdrawal_pending": False}},
+                            session=session,
+                        )
+                    else:
+                        mongo.db.inventory.delete_one({"_id": inv_oid}, session=session)
+
+    except RuntimeError:
+        return jsonify({"error": "Request was already shipped"}), 409
+    except Exception:
+        return jsonify({"error": "Ship failed. Please try again."}), 500
+
+    return jsonify({"ok": True, "request_id": request_id, "status": "shipped"})
+
+
+@app.route("/api/admin/ship-requests/<request_id>/reject", methods=["PATCH"])
+@require_admin
+def admin_ship_request_reject(request_id):
+    try:
+        req_oid = ObjectId(request_id)
+    except Exception:
+        return jsonify({"error": "Invalid request_id"}), 400
+
+    data       = request.get_json(silent=True) or {}
+    admin_note = str(data.get("admin_note", "")).strip() or None
+
+    ship_req = mongo.db.ship_requests.find_one({"_id": req_oid})
+    if not ship_req:
+        return jsonify({"error": "Ship request not found"}), 404
+    if ship_req["status"] != "pending":
+        return jsonify({"error": f"Request is already in terminal status: {ship_req['status']}"}), 400
+
+    now      = datetime.now(timezone.utc)
+    inv_oid  = ship_req["inventory_id"]
+    card_oid = ship_req["card_id"]
+
+    try:
+        with mongo.db.client.start_session() as session:
+            with session.start_transaction():
+                # 1. Update status — filter on "pending" guards against double-reject
+                req_result = mongo.db.ship_requests.update_one(
+                    {"_id": req_oid, "status": "pending"},
+                    {"$set": {
+                        "status":      "rejected",
+                        "rejected_at": now,
+                        "updated_at":  now,
+                        "admin_note":  admin_note,
+                    }},
+                    session=session,
+                )
+                if req_result.matched_count == 0:
+                    raise RuntimeError("already_rejected")
+
+                # 2. Return reserved company_inventory quantity
+                mongo.db.company_inventory.update_one(
+                    {"card_id": card_oid},
+                    {"$inc": {"available_quantity": 1}},
+                    session=session,
+                )
+
+                # 3. Clear user's withdrawal_pending flag
+                mongo.db.inventory.update_one(
+                    {"_id": inv_oid},
+                    {"$set": {"withdrawal_pending": False}},
+                    session=session,
+                )
+
+    except RuntimeError:
+        return jsonify({"error": "Request was already rejected"}), 409
+    except Exception:
+        return jsonify({"error": "Reject failed. Please try again."}), 500
+
+    return jsonify({"ok": True, "request_id": request_id, "status": "rejected"})
 
 
 # ---------------------------------------------------------------------------

@@ -208,5 +208,26 @@ make_index(
     name="upgrade_pending_user_status",
 )
 
+# ship_requests — list by user + filter by status (user-facing status check)
+make_index(
+    db.ship_requests,
+    [("user_id", pymongo.ASCENDING), ("status", pymongo.ASCENDING)],
+    name="ship_requests_user_status",
+)
+
+# ship_requests — prevent duplicate pending requests (card_id + user_id lookup)
+make_index(
+    db.ship_requests,
+    [("card_id", pymongo.ASCENDING), ("user_id", pymongo.ASCENDING)],
+    name="ship_requests_card_user",
+)
+
+# ship_requests — admin list sorted by submitted date
+make_index(
+    db.ship_requests,
+    [("status", pymongo.ASCENDING), ("created_at", pymongo.DESCENDING)],
+    name="ship_requests_status_created",
+)
+
 print("\nAll indexes created successfully.\n")
 client.close()

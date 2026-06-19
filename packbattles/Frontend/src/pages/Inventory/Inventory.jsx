@@ -28,6 +28,13 @@ const Inventory = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError]     = useState('');
 
+    // Ship modal state
+    const [shipTarget, setShipTarget]   = useState(null);   // inventory item being requested
+    const [shipAddress, setShipAddress] = useState('');
+    const [shipLoading, setShipLoading] = useState(false);
+    const [shipError, setShipError]     = useState('');
+    const [shipSuccess, setShipSuccess] = useState('');
+
     useEffect(() => {
         axios
             .get(`${API}/api/inventory`, {
@@ -37,6 +44,51 @@ const Inventory = () => {
             .catch(() => setError('Failed to load inventory. Make sure the backend is running.'))
             .finally(() => setLoading(false));
     }, [token]);
+
+    const openShipModal = (item) => {
+        setShipTarget(item);
+        setShipAddress('');
+        setShipError('');
+        setShipSuccess('');
+    };
+
+    const closeShipModal = () => {
+        if (shipLoading) return;
+        setShipTarget(null);
+    };
+
+    const handleShipSubmit = async () => {
+        if (!shipTarget) return;
+        const addr = shipAddress.trim();
+        if (!addr) {
+            setShipError('Please enter a shipping address.');
+            return;
+        }
+        setShipLoading(true);
+        setShipError('');
+        setShipSuccess('');
+        try {
+            await axios.post(
+                `${API}/api/me/ship-requests`,
+                { card_id: shipTarget.card_id, shipping_address: addr },
+                { headers: { Authorization: `Bearer ${token}` } },
+            );
+            setShipSuccess('Shipment request submitted! Your card is now reserved.');
+            // Update local item to show pending badge immediately
+            setItems((prev) =>
+                prev.map((it) =>
+                    it.inventory_id === shipTarget.inventory_id
+                        ? { ...it, withdrawal_pending: true, can_ship: false }
+                        : it,
+                ),
+            );
+            setTimeout(() => setShipTarget(null), 1800);
+        } catch (err) {
+            setShipError(err?.response?.data?.error || 'Request failed. Please try again.');
+        } finally {
+            setShipLoading(false);
+        }
+    };
 
     return (
         <>
@@ -97,6 +149,17 @@ const Inventory = () => {
                                     <div className="inv-card-body">
                                         <p className="inv-card-name">{item.name}</p>
                                         <span className="inv-card-value">{fmtPackCoins(item.value)}</span>
+
+                                        {item.withdrawal_pending ? (
+                                            <span className="inv-ship-badge">Shipment Pending</span>
+                                        ) : item.can_ship ? (
+                                            <button
+                                                className="inv-ship-btn"
+                                                onClick={() => openShipModal(item)}
+                                            >
+                                                Request Shipment
+                                            </button>
+                                        ) : null}
                                     </div>
                                 </div>
                             </div>
@@ -106,6 +169,62 @@ const Inventory = () => {
             </section>
 
             <StartNow />
+
+            {/* Ship Request Modal */}
+            {shipTarget && (
+                <div className="inv-ship-overlay" onClick={closeShipModal}>
+                    <div className="inv-ship-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="inv-ship-modal-header">
+                            <h3>Request Shipment</h3>
+                            <button
+                                className="inv-ship-close"
+                                onClick={closeShipModal}
+                                disabled={shipLoading}
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <p className="inv-ship-card-name">{shipTarget.name}</p>
+
+                        <div className="inv-ship-field">
+                            <label className="inv-ship-field-label">Shipping Address</label>
+                            <textarea
+                                className="inv-ship-textarea"
+                                placeholder={"Full name\nStreet address\nCity, State, ZIP\nCountry"}
+                                value={shipAddress}
+                                onChange={(e) => setShipAddress(e.target.value)}
+                                rows={4}
+                                disabled={shipLoading}
+                            />
+                        </div>
+
+                        <p className="inv-ship-note">
+                            Your address is stored with this request and visible to our team. You cannot edit it after submitting.
+                        </p>
+
+                        {shipError   && <p className="inv-ship-error">{shipError}</p>}
+                        {shipSuccess && <p className="inv-ship-success">{shipSuccess}</p>}
+
+                        <div className="inv-ship-actions">
+                            <button
+                                className="inv-ship-cancel-btn"
+                                onClick={closeShipModal}
+                                disabled={shipLoading}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="inv-ship-submit-btn"
+                                onClick={handleShipSubmit}
+                                disabled={shipLoading}
+                            >
+                                {shipLoading ? 'Submitting…' : 'Submit Request'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 };

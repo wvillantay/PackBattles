@@ -1131,6 +1131,211 @@
     }
 }
 
+/* ── Admin Ship Requests page ───────────────────────────────────────────── */
+
+.admin-sr-filters {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin-bottom: 2rem;
+}
+
+.admin-sr-filter-btn {
+    padding: 0.45rem 1.2rem;
+    font-size: 1.2rem;
+    font-weight: 600;
+    border-radius: 2rem;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.55);
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    font-family: inherit;
+}
+
+.admin-sr-filter-btn:hover {
+    color: #fff;
+    border-color: rgba(163, 91, 255, 0.4);
+    background: rgba(163, 91, 255, 0.1);
+}
+
+.admin-sr-filter-active {
+    color: #A35BFF;
+    background: rgba(163, 91, 255, 0.12);
+    border-color: rgba(163, 91, 255, 0.5);
+}
+
+.admin-sr-count {
+    color: rgba(255, 255, 255, 0.35);
+    font-size: 1.3rem;
+    margin-left: auto;
+}
+
+.admin-sr-address {
+    font-size: 1.2rem;
+    color: rgba(255, 255, 255, 0.65);
+    white-space: pre-line;
+    max-width: 22rem;
+    line-height: 1.4;
+}
+
+.admin-sr-status-pending  { color: #f59e0b; }
+.admin-sr-status-shipped  { color: #4ade80; }
+.admin-sr-status-rejected { color: #f87171; }
+
+.admin-sr-actions {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: nowrap;
+}
+
+.admin-sr-ship-btn {
+    padding: 0.4rem 1rem;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #4ade80;
+    background: rgba(74, 222, 128, 0.1);
+    border: 1px solid rgba(74, 222, 128, 0.3);
+    border-radius: 0.6rem;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    font-family: inherit;
+    white-space: nowrap;
+}
+
+.admin-sr-ship-btn:hover:not(:disabled) {
+    background: rgba(74, 222, 128, 0.2);
+    border-color: rgba(74, 222, 128, 0.55);
+}
+
+.admin-sr-ship-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.admin-sr-reject-btn {
+    padding: 0.4rem 1rem;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #f87171;
+    background: rgba(248, 113, 113, 0.1);
+    border: 1px solid rgba(248, 113, 113, 0.3);
+    border-radius: 0.6rem;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    font-family: inherit;
+    white-space: nowrap;
+}
+
+.admin-sr-reject-btn:hover:not(:disabled) {
+    background: rgba(248, 113, 113, 0.2);
+    border-color: rgba(248, 113, 113, 0.55);
+}
+
+.admin-sr-reject-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Reject modal */
+.admin-sr-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1.6rem;
+}
+
+.admin-sr-modal {
+    background: #1a1a2e;
+    border: 1px solid rgba(248, 113, 113, 0.3);
+    border-radius: 1.2rem;
+    padding: 2rem;
+    width: 100%;
+    max-width: 440px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+}
+
+.admin-sr-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.admin-sr-modal-header h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #e2e2e2;
+    margin: 0;
+}
+
+.admin-sr-modal-close {
+    background: transparent;
+    border: none;
+    color: #888;
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 0.2rem 0.4rem;
+    border-radius: 0.4rem;
+    transition: color 0.15s;
+}
+
+.admin-sr-modal-close:hover:not(:disabled) { color: #e2e2e2; }
+.admin-sr-modal-close:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.admin-sr-modal-card {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #A35BFF;
+    margin: 0;
+}
+
+.admin-sr-modal-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.admin-sr-modal-label {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.55);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.admin-sr-modal-textarea {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    font-size: 1.3rem;
+    font-family: inherit;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 0.8rem;
+    color: #e2e2e2;
+    resize: vertical;
+    min-height: 6rem;
+    transition: border-color 0.15s ease;
+}
+
+.admin-sr-modal-textarea:focus {
+    outline: none;
+    border-color: rgba(163, 91, 255, 0.4);
+}
+
+.admin-sr-modal-textarea:disabled { opacity: 0.5; }
+
+.admin-sr-modal-error   { font-size: 1.2rem; color: #f87171; margin: 0; }
+.admin-sr-modal-success { font-size: 1.2rem; color: #4ade80; font-weight: 600; margin: 0; }
+
+.admin-sr-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.8rem;
+    padding-top: 0.4rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
 /* ── Admin Company Inventory — Value cell ───────────────────────────────── */
 
 .admin-ci-value-cell {

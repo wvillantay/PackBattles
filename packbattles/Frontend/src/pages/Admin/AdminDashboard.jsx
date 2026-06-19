@@ -46,6 +46,11 @@ const AdminDashboard = () => {
                         <p>Search TCGdex and import cards into the catalog with pricing data.</p>
                         <span className="admin-card-cta">Import Cards →</span>
                     </Link>
+                    <Link to="/admin/ship-requests" className="admin-card">
+                        <h3>Ship Requests</h3>
+                        <p>Review pending shipment requests. Ship or reject with one click.</p>
+                        <span className="admin-card-cta">Review Requests →</span>
+                    </Link>
                 </div>
             </div>
         </section>
