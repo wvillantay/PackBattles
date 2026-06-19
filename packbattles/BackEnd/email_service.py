@@ -17,11 +17,11 @@ def _send(to_email, subject, body):
     from_addr = os.getenv("EMAIL_FROM", "").strip()
 
     if not api_key or not from_addr:
-        logger.warning("Email skipped: RESEND_API_KEY or EMAIL_FROM not configured.")
+        logger.warning("[email] Skipped: RESEND_API_KEY or EMAIL_FROM not configured.")
         return
 
     if not to_email:
-        logger.warning("Email skipped: recipient address is empty.")
+        logger.warning("[email] Skipped: recipient address is empty.")
         return
 
     try:
@@ -34,7 +34,7 @@ def _send(to_email, subject, body):
             "text":    body,
         })
     except Exception as exc:
-        logger.error("Email send failed (to=%s subject=%r): %s", to_email, subject, exc)
+        logger.error("[email] Send failed: %s", exc)
 
 
 # ---------------------------------------------------------------------------
