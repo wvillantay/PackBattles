@@ -5,6 +5,8 @@ import secrets
 from datetime import datetime, timedelta, timezone
 from functools import wraps
 
+import email_service
+
 import bcrypt
 import jwt
 from bson import ObjectId
@@ -2671,6 +2673,13 @@ def ship_request_submit():
     except Exception:
         return jsonify({"error": "Request failed. Please try again."}), 500
 
+    # Email — after successful DB write; failure must not affect the response
+    _user = mongo.db.users.find_one({"_id": ObjectId(g.user_id)}, {"name": 1, "email": 1})
+    if _user:
+        email_service.send_ship_request_submitted(
+            _user.get("email", ""), _user.get("name", ""), card["name"],
+        )
+
     return jsonify({"ok": True, "request_id": str(inserted_id), "card_name": card["name"]})
 
 
@@ -2802,6 +2811,13 @@ def admin_ship_request_ship(request_id):
     except Exception:
         return jsonify({"error": "Ship failed. Please try again."}), 500
 
+    # Email — after successful transaction; failure must not affect the response
+    _user = mongo.db.users.find_one({"_id": ship_req["user_id"]}, {"name": 1, "email": 1})
+    if _user:
+        email_service.send_ship_request_shipped(
+            _user.get("email", ""), _user.get("name", ""), ship_req.get("card_name", ""),
+        )
+
     return jsonify({"ok": True, "request_id": request_id, "status": "shipped"})
 
 
@@ -2844,6 +2860,16 @@ def admin_ship_request_tracking(request_id):
     mongo.db.ship_requests.update_one({"_id": req_oid}, {"$set": set_fields})
 
     updated = mongo.db.ship_requests.find_one({"_id": req_oid})
+
+    # Email — after successful DB write; failure must not affect the response
+    _user = mongo.db.users.find_one({"_id": ship_req["user_id"]}, {"name": 1, "email": 1})
+    if _user:
+        email_service.send_tracking_updated(
+            _user.get("email", ""), _user.get("name", ""), ship_req.get("card_name", ""),
+            tracking_number=updated.get("tracking_number"),
+            carrier=updated.get("carrier"),
+        )
+
     return jsonify({
         "ok":             True,
         "request_id":     request_id,
@@ -2908,6 +2934,14 @@ def admin_ship_request_reject(request_id):
         return jsonify({"error": "Request was already rejected"}), 409
     except Exception:
         return jsonify({"error": "Reject failed. Please try again."}), 500
+
+    # Email — after successful transaction; failure must not affect the response
+    _user = mongo.db.users.find_one({"_id": ship_req["user_id"]}, {"name": 1, "email": 1})
+    if _user:
+        email_service.send_ship_request_rejected(
+            _user.get("email", ""), _user.get("name", ""), ship_req.get("card_name", ""),
+            admin_note=admin_note,
+        )
 
     return jsonify({"ok": True, "request_id": request_id, "status": "rejected"})
 
