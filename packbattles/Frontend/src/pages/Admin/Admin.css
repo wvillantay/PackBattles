@@ -1172,12 +1172,38 @@
     margin-left: auto;
 }
 
+/* Flat address (old MVP records) */
 .admin-sr-address {
     font-size: 1.2rem;
     color: rgba(255, 255, 255, 0.65);
     white-space: pre-line;
     max-width: 22rem;
     line-height: 1.4;
+}
+
+/* Structured address (new records) */
+.admin-sr-addr-block {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    max-width: 22rem;
+}
+
+.admin-sr-addr-block span {
+    font-size: 1.2rem;
+    color: rgba(255, 255, 255, 0.65);
+    line-height: 1.4;
+}
+
+.admin-sr-addr-block span:first-child {
+    color: rgba(255, 255, 255, 0.85);
+    font-weight: 600;
+}
+
+.admin-sr-addr-phone {
+    color: rgba(163, 91, 255, 0.7) !important;
+    font-size: 1.1rem !important;
+    font-weight: 400 !important;
 }
 
 .admin-sr-status-pending  { color: #f59e0b; }

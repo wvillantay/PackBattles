@@ -286,35 +286,53 @@
 }
 
 .inv-ship-field-label {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     font-weight: 600;
-    color: rgba(255, 255, 255, 0.7);
+    color: rgba(255, 255, 255, 0.6);
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
 
-.inv-ship-textarea {
+.inv-ship-req {
+    color: #f87171;
+    font-weight: 700;
+}
+
+.inv-ship-opt {
+    font-weight: 400;
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.3);
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.inv-ship-input {
     width: 100%;
-    padding: 0.9rem 1.1rem;
+    padding: 0.75rem 1rem;
     font-size: 1.3rem;
     font-family: inherit;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 0.8rem;
+    border-radius: 0.7rem;
     color: #e2e2e2;
-    resize: vertical;
-    min-height: 8rem;
     transition: border-color 0.15s ease;
 }
 
-.inv-ship-textarea:focus {
+.inv-ship-input:focus {
     outline: none;
     border-color: rgba(163, 91, 255, 0.5);
 }
 
-.inv-ship-textarea:disabled {
+.inv-ship-input:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+}
+
+/* 3-column row: City / State / Postal */
+.inv-ship-row3 {
+    display: grid;
+    grid-template-columns: 2fr 1.4fr 1.2fr;
+    gap: 0.8rem;
 }
 
 .inv-ship-note {

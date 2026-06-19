@@ -99,6 +99,24 @@ const AdminShipRequests = () => {
         }
     };
 
+    const renderAddress = (req) => {
+        // New records: has structured fields (full_name is the indicator)
+        if (req.full_name) {
+            return (
+                <div className="admin-sr-addr-block">
+                    <span>{req.full_name}</span>
+                    <span>{req.address_line1}</span>
+                    {req.address_line2 && <span>{req.address_line2}</span>}
+                    <span>{req.city}, {req.state} {req.postal_code}</span>
+                    <span>{req.country}</span>
+                    {req.phone && <span className="admin-sr-addr-phone">{req.phone}</span>}
+                </div>
+            );
+        }
+        // Old records: flat shipping_address string
+        return <span className="admin-sr-address">{req.shipping_address || '—'}</span>;
+    };
+
     const fmtDate = (iso) => {
         if (!iso) return '—';
         return new Date(iso).toLocaleDateString('en-US', {
@@ -176,9 +194,7 @@ const AdminShipRequests = () => {
                                                 <p style={{ margin: 0, color: '#fff' }}>{req.user_name}</p>
                                                 <p style={{ margin: 0, fontSize: '1.15rem', color: 'rgba(255,255,255,0.45)' }}>{req.user_email}</p>
                                             </td>
-                                            <td>
-                                                <span className="admin-sr-address">{req.shipping_address}</span>
-                                            </td>
+                                            <td>{renderAddress(req)}</td>
                                             <td>
                                                 <span className={`admin-sr-status-${req.status}`} style={{ fontWeight: 600, textTransform: 'capitalize' }}>
                                                     {req.status}

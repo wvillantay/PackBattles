@@ -29,11 +29,19 @@ const Inventory = () => {
     const [error, setError]     = useState('');
 
     // Ship modal state
-    const [shipTarget, setShipTarget]   = useState(null);   // inventory item being requested
-    const [shipAddress, setShipAddress] = useState('');
+    const [shipTarget, setShipTarget]   = useState(null);
     const [shipLoading, setShipLoading] = useState(false);
     const [shipError, setShipError]     = useState('');
     const [shipSuccess, setShipSuccess] = useState('');
+
+    const EMPTY_FORM = {
+        full_name: '', address_line1: '', address_line2: '',
+        city: '', state: '', postal_code: '', country: '', phone: '',
+    };
+    const [shipForm, setShipForm] = useState(EMPTY_FORM);
+
+    const setField = (field) => (e) =>
+        setShipForm((prev) => ({ ...prev, [field]: e.target.value }));
 
     useEffect(() => {
         axios
@@ -47,7 +55,7 @@ const Inventory = () => {
 
     const openShipModal = (item) => {
         setShipTarget(item);
-        setShipAddress('');
+        setShipForm(EMPTY_FORM);
         setShipError('');
         setShipSuccess('');
     };
@@ -59,18 +67,40 @@ const Inventory = () => {
 
     const handleShipSubmit = async () => {
         if (!shipTarget) return;
-        const addr = shipAddress.trim();
-        if (!addr) {
-            setShipError('Please enter a shipping address.');
-            return;
+
+        // Client-side required field check
+        const required = [
+            ['full_name',    'Full Name'],
+            ['address_line1','Address Line 1'],
+            ['city',         'City'],
+            ['state',        'State'],
+            ['postal_code',  'Postal Code'],
+            ['country',      'Country'],
+        ];
+        for (const [key, label] of required) {
+            if (!shipForm[key].trim()) {
+                setShipError(`${label} is required.`);
+                return;
+            }
         }
+
         setShipLoading(true);
         setShipError('');
         setShipSuccess('');
         try {
             await axios.post(
                 `${API}/api/me/ship-requests`,
-                { card_id: shipTarget.card_id, shipping_address: addr },
+                {
+                    card_id:       shipTarget.card_id,
+                    full_name:     shipForm.full_name.trim(),
+                    address_line1: shipForm.address_line1.trim(),
+                    address_line2: shipForm.address_line2.trim(),
+                    city:          shipForm.city.trim(),
+                    state:         shipForm.state.trim(),
+                    postal_code:   shipForm.postal_code.trim(),
+                    country:       shipForm.country.trim(),
+                    phone:         shipForm.phone.trim(),
+                },
                 { headers: { Authorization: `Bearer ${token}` } },
             );
             setShipSuccess('Shipment request submitted! Your card is now reserved.');
@@ -188,13 +218,97 @@ const Inventory = () => {
                         <p className="inv-ship-card-name">{shipTarget.name}</p>
 
                         <div className="inv-ship-field">
-                            <label className="inv-ship-field-label">Shipping Address</label>
-                            <textarea
-                                className="inv-ship-textarea"
-                                placeholder={"Full name\nStreet address\nCity, State, ZIP\nCountry"}
-                                value={shipAddress}
-                                onChange={(e) => setShipAddress(e.target.value)}
-                                rows={4}
+                            <label className="inv-ship-field-label">Full Name <span className="inv-ship-req">*</span></label>
+                            <input
+                                className="inv-ship-input"
+                                type="text"
+                                placeholder="Recipient full name"
+                                value={shipForm.full_name}
+                                onChange={setField('full_name')}
+                                disabled={shipLoading}
+                            />
+                        </div>
+
+                        <div className="inv-ship-field">
+                            <label className="inv-ship-field-label">Address Line 1 <span className="inv-ship-req">*</span></label>
+                            <input
+                                className="inv-ship-input"
+                                type="text"
+                                placeholder="Street address, apt, building"
+                                value={shipForm.address_line1}
+                                onChange={setField('address_line1')}
+                                disabled={shipLoading}
+                            />
+                        </div>
+
+                        <div className="inv-ship-field">
+                            <label className="inv-ship-field-label">Address Line 2 <span className="inv-ship-opt">(optional)</span></label>
+                            <input
+                                className="inv-ship-input"
+                                type="text"
+                                placeholder="Suite, unit, floor"
+                                value={shipForm.address_line2}
+                                onChange={setField('address_line2')}
+                                disabled={shipLoading}
+                            />
+                        </div>
+
+                        <div className="inv-ship-row3">
+                            <div className="inv-ship-field">
+                                <label className="inv-ship-field-label">City <span className="inv-ship-req">*</span></label>
+                                <input
+                                    className="inv-ship-input"
+                                    type="text"
+                                    placeholder="City"
+                                    value={shipForm.city}
+                                    onChange={setField('city')}
+                                    disabled={shipLoading}
+                                />
+                            </div>
+                            <div className="inv-ship-field">
+                                <label className="inv-ship-field-label">State / Region <span className="inv-ship-req">*</span></label>
+                                <input
+                                    className="inv-ship-input"
+                                    type="text"
+                                    placeholder="State"
+                                    value={shipForm.state}
+                                    onChange={setField('state')}
+                                    disabled={shipLoading}
+                                />
+                            </div>
+                            <div className="inv-ship-field">
+                                <label className="inv-ship-field-label">Postal Code <span className="inv-ship-req">*</span></label>
+                                <input
+                                    className="inv-ship-input"
+                                    type="text"
+                                    placeholder="ZIP / Postal"
+                                    value={shipForm.postal_code}
+                                    onChange={setField('postal_code')}
+                                    disabled={shipLoading}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="inv-ship-field">
+                            <label className="inv-ship-field-label">Country <span className="inv-ship-req">*</span></label>
+                            <input
+                                className="inv-ship-input"
+                                type="text"
+                                placeholder="Country"
+                                value={shipForm.country}
+                                onChange={setField('country')}
+                                disabled={shipLoading}
+                            />
+                        </div>
+
+                        <div className="inv-ship-field">
+                            <label className="inv-ship-field-label">Phone <span className="inv-ship-opt">(optional)</span></label>
+                            <input
+                                className="inv-ship-input"
+                                type="tel"
+                                placeholder="Contact phone number"
+                                value={shipForm.phone}
+                                onChange={setField('phone')}
                                 disabled={shipLoading}
                             />
                         </div>

@@ -2546,17 +2546,46 @@ def activity_feed():
 @app.route("/api/me/ship-requests", methods=["POST"])
 @require_auth
 def ship_request_submit():
-    data             = request.get_json(silent=True) or {}
-    card_id_str      = data.get("card_id", "")
-    shipping_address = str(data.get("shipping_address", "")).strip()
+    data = request.get_json(silent=True) or {}
+    card_id_str = data.get("card_id", "")
+
+    # Structured address fields
+    full_name     = str(data.get("full_name",     "")).strip()
+    address_line1 = str(data.get("address_line1", "")).strip()
+    address_line2 = str(data.get("address_line2", "")).strip()
+    city          = str(data.get("city",          "")).strip()
+    state         = str(data.get("state",         "")).strip()
+    postal_code   = str(data.get("postal_code",   "")).strip()
+    country       = str(data.get("country",       "")).strip()
+    phone         = str(data.get("phone",         "")).strip()
 
     try:
         card_oid = ObjectId(card_id_str)
     except Exception:
         return jsonify({"error": "Invalid card_id"}), 400
 
-    if not shipping_address:
-        return jsonify({"error": "shipping_address is required"}), 400
+    # Validate required address fields
+    for field_name, value in [
+        ("full_name",     full_name),
+        ("address_line1", address_line1),
+        ("city",          city),
+        ("state",         state),
+        ("postal_code",   postal_code),
+        ("country",       country),
+    ]:
+        if not value:
+            label = field_name.replace("_", " ").title()
+            return jsonify({"error": f"{label} is required"}), 400
+
+    # Generate shipping_address string for admin copy/paste and backward compat
+    addr_lines = [full_name, address_line1]
+    if address_line2:
+        addr_lines.append(address_line2)
+    addr_lines.append(f"{city}, {state} {postal_code}")
+    addr_lines.append(country)
+    if phone:
+        addr_lines.append(f"Phone: {phone}")
+    shipping_address = "\n".join(addr_lines)
 
     uid = ObjectId(g.user_id)
 
@@ -2614,6 +2643,14 @@ def ship_request_submit():
                     "inventory_id":     inv_oid,
                     "card_name":        card["name"],
                     "card_image_url":   card.get("image_url", ""),
+                    "full_name":        full_name,
+                    "address_line1":    address_line1,
+                    "address_line2":    address_line2,
+                    "city":             city,
+                    "state":            state,
+                    "postal_code":      postal_code,
+                    "country":          country,
+                    "phone":            phone,
                     "shipping_address": shipping_address,
                     "status":           "pending",
                     "admin_note":       None,
@@ -2651,6 +2688,14 @@ def ship_request_list():
             "card_name":        r.get("card_name", ""),
             "card_image_url":   r.get("card_image_url", ""),
             "shipping_address": r.get("shipping_address", ""),
+            "full_name":        r.get("full_name"),
+            "address_line1":    r.get("address_line1"),
+            "address_line2":    r.get("address_line2"),
+            "city":             r.get("city"),
+            "state":            r.get("state"),
+            "postal_code":      r.get("postal_code"),
+            "country":          r.get("country"),
+            "phone":            r.get("phone"),
             "status":           r.get("status", ""),
             "admin_note":       r.get("admin_note"),
             "created_at":       r["created_at"].isoformat() if r.get("created_at") else None,
@@ -2685,6 +2730,14 @@ def admin_ship_request_list():
             "card_name":        r.get("card_name", ""),
             "card_image_url":   r.get("card_image_url", ""),
             "shipping_address": r.get("shipping_address", ""),
+            "full_name":        r.get("full_name"),
+            "address_line1":    r.get("address_line1"),
+            "address_line2":    r.get("address_line2"),
+            "city":             r.get("city"),
+            "state":            r.get("state"),
+            "postal_code":      r.get("postal_code"),
+            "country":          r.get("country"),
+            "phone":            r.get("phone"),
             "status":           r.get("status", ""),
             "admin_note":       r.get("admin_note"),
             "user_id":          str(r["user_id"]) if r.get("user_id") else None,
