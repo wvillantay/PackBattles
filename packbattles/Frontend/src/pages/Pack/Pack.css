@@ -175,6 +175,26 @@
     position: relative;
 }
 
+/* Rarity badge inside the result overlay — centred at the card bottom edge */
+.result-card-item .label {
+    display: inline-block;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: -11px;
+    white-space: nowrap;
+    border-radius: 0.8rem;
+    background: linear-gradient(180deg, #A35BFF 0%, #811FFF 100%);
+    color: #FFF;
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 0.18rem 1rem;
+    line-height: 1.5;
+    z-index: 1;
+    pointer-events: none;
+}
+
 .result-card-item p {
     color: #fff;
     font-size: 1.3rem;
@@ -491,6 +511,219 @@
 
 .pk-slot-landed {
     animation: pk-card-land 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* ── Pack Opening Animation ──────────────────────────────────────────────── */
+
+/* Full-screen dark overlay, centred — z-index 2300 sits between flash (2500) and result (2000) */
+.pack-anim-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2300;
+    background: rgba(8, 6, 32, 0.94);
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: pack-anim-fadein 0.2s ease both;
+    pointer-events: none;
+}
+
+/* Positioning anchor for all pack pieces */
+.pack-scene {
+    position: relative;
+    width: 175px;
+    height: 280px;
+}
+
+/* Full-height pack body — stays in place, clips stripe + shine */
+.pack-base {
+    position: absolute;
+    inset: 0;
+    border-radius: 8px;
+    background: linear-gradient(150deg, #0c0920 0%, #1e0d3a 45%, #0f0a22 100%);
+    border: 1px solid rgba(163, 91, 255, 0.28);
+    overflow: hidden;
+    z-index: 1;
+}
+
+/* Top flap — identical visual, sits above base, tears upward on delay */
+.pack-flap {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 22%;
+    border-radius: 8px 8px 0 0;
+    background: linear-gradient(150deg, #0c0920 0%, #1e0d3a 45%, #0f0a22 100%);
+    border: 1px solid rgba(163, 91, 255, 0.28);
+    border-bottom: none;
+    overflow: hidden;
+    z-index: 3;
+    transform-origin: top center;
+    animation: pack-flap-tear 0.48s cubic-bezier(0.6, 0.05, 0.95, 0.5) 0.85s both;
+}
+
+/*
+ * Accent stripe — height is fixed at the full pack height (280px) in BOTH containers.
+ * Each parent's overflow:hidden clips it to its own region, but because both stripes
+ * start at top:0 with the same 280px gradient, the colours match perfectly at the seam.
+ */
+.pack-stripe {
+    position: absolute;
+    top: 0;
+    left: 26px;
+    width: 15px;
+    height: 280px;
+    background: linear-gradient(180deg, #00e5ff 0%, #a35bff 55%, #6a0fd8 100%);
+    opacity: 0.72;
+    border-radius: 2px;
+}
+
+/* Diagonal foil shimmer that sweeps across the pack surface */
+.pack-shine {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        108deg,
+        transparent 25%,
+        rgba(255, 255, 255, 0.10) 44%,
+        rgba(255, 255, 255, 0.20) 50%,
+        rgba(255, 255, 255, 0.10) 56%,
+        transparent 75%
+    );
+    background-size: 250% 100%;
+    animation: pack-shine-sweep 1.8s linear infinite;
+}
+
+/* Thin seam line at the tear point — glows then fades */
+.pack-seam-line {
+    position: absolute;
+    top: calc(22% - 1px);
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: rgba(0, 229, 255, 0.55);
+    border-radius: 1px;
+    z-index: 4;
+    animation: pack-seam-glow 0.72s ease-in-out 0.2s both;
+}
+
+/* Radial light leak that expands from the gap after the flap tears away */
+.pack-light-leak {
+    position: absolute;
+    left: 50%;
+    top: 22%;
+    width: 170px;
+    height: 90px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: radial-gradient(
+        ellipse at center,
+        rgba(0, 229, 255, 0.55) 0%,
+        rgba(163, 91, 255, 0.38) 40%,
+        transparent 75%
+    );
+    z-index: 2;
+    pointer-events: none;
+    animation: pack-light-expand 0.65s ease-out 1.15s both;
+}
+
+/* Glowing card-shaped ghost silhouettes that rise from the opening */
+.pack-ghost {
+    position: absolute;
+    width: 46px;
+    height: 64px;
+    top: 12%;
+    border-radius: 4px;
+    background: linear-gradient(155deg, rgba(0, 229, 255, 0.18) 0%, rgba(163, 91, 255, 0.30) 100%);
+    box-shadow:
+        0 0 12px rgba(163, 91, 255, 0.75),
+        0 0 28px rgba(0, 229, 255, 0.45),
+        inset 0 0 8px rgba(255, 255, 255, 0.08);
+    filter: blur(0.6px);
+    z-index: 5;
+    animation-duration: 0.85s;
+    animation-timing-function: ease-out;
+    animation-fill-mode: both;
+    animation-name: pack-ghost-rise;
+}
+
+/* Center ghost */
+.pack-ghost-1 {
+    left: calc(50% - 23px);
+    animation-delay: 1.42s;
+}
+
+/* Left ghost — slightly dimmer */
+.pack-ghost-2 {
+    left: calc(50% - 77px);
+    opacity: 0.75;
+    animation-delay: 1.57s;
+}
+
+/* Right ghost — slightly dimmer */
+.pack-ghost-3 {
+    left: calc(50% + 31px);
+    opacity: 0.75;
+    animation-delay: 1.57s;
+}
+
+/* ── Keyframes ── */
+
+@keyframes pack-anim-fadein {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes pack-seam-glow {
+    0%  {
+        opacity: 0;
+        background: rgba(0, 229, 255, 0.4);
+        box-shadow: none;
+    }
+    38% {
+        opacity: 1;
+        background: rgba(220, 240, 255, 0.95);
+        box-shadow: 0 0 16px 6px rgba(0, 229, 255, 0.85), 0 0 36px rgba(163, 91, 255, 0.5);
+    }
+    100% {
+        opacity: 0.45;
+        background: rgba(0, 229, 255, 0.3);
+        box-shadow: 0 0 6px 2px rgba(0, 229, 255, 0.4);
+    }
+}
+
+@keyframes pack-flap-tear {
+    0%   { transform: translateY(0)     rotate(0deg);  opacity: 1;   }
+    65%  { transform: translateY(-92%)  rotate(6deg);  opacity: 0.9; }
+    100% { transform: translateY(-115%) rotate(10deg); opacity: 0;   }
+}
+
+@keyframes pack-light-expand {
+    0%   { opacity: 0;    transform: translate(-50%, -50%) scale(0.2); }
+    55%  { opacity: 1;    transform: translate(-50%, -50%) scale(1);   }
+    100% { opacity: 0.65; transform: translate(-50%, -50%) scale(1.2); }
+}
+
+@keyframes pack-ghost-rise {
+    0%   { transform: translateY(24px);  opacity: 0;   }
+    20%  {                               opacity: 1;   }
+    80%  {                               opacity: 0.9; }
+    100% { transform: translateY(-38px); opacity: 0;   }
+}
+
+@keyframes pack-shine-sweep {
+    0%   { background-position: -100% center; }
+    100% { background-position: 300% center;  }
+}
+
+/* Belt-and-suspenders: disable all pack anim CSS if reduced motion is set */
+@media (prefers-reduced-motion: reduce) {
+    .pack-anim-overlay * {
+        animation: none !important;
+        transition: none !important;
+    }
 }
 
 @media (max-width: 575px) {

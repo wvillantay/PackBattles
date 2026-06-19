@@ -105,7 +105,7 @@ const Pack = () => {
     const [openError, setOpenError] = useState('');
     const [result,    setResult]    = useState(null);
 
-    // Animation phases: 'idle' | 'shaking' | 'flashing' | 'revealing' | 'done'
+    // Animation phases: 'idle' | 'animating' | 'revealing' | 'done'
     const [animPhase, setAnimPhase] = useState('idle');
     // Each slot: { state: 'waiting'|'spinning'|'landed', displayCard: null|cardObj, frame: 0 }
     const [slots, setSlots] = useState([]);
@@ -124,12 +124,16 @@ const Pack = () => {
 
     const handleOpen = async () => {
         setOpenError('');
-        setAnimPhase('shaking');
         setSlots([]);
 
-        // Shake for at least 1.4 s while the API fires exactly once in parallel.
+        // CSS animation starts immediately; API fires in parallel.
+        // Promise.all ensures real cards are never shown before the backend returns results.
+        // If the API is slower than 2500 ms the animation holds its end state until it resolves.
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        setAnimPhase('animating');
+
         const [, apiResult] = await Promise.all([
-            new Promise(r => setTimeout(r, 1400)),
+            new Promise(r => setTimeout(r, reducedMotion ? 0 : 2500)),
             axios
                 .post(
                     `${API}/api/packs/${packId}/open`,
@@ -148,10 +152,6 @@ const Pack = () => {
 
         updateUser({ credits: apiResult.data.credits_remaining });
         setResult(apiResult.data);
-
-        // Flash
-        setAnimPhase('flashing');
-        await new Promise(r => setTimeout(r, 450));
 
         // Build decoy pool from pack.pool (already in state — no extra API call)
         const cards     = apiResult.data.cards_received;
@@ -219,9 +219,25 @@ const Pack = () => {
 
     return (
         <>
-            {/* Full-screen flash between shake and first card reveal */}
-            {animPhase === 'flashing' && (
-                <div className="pack-open-flash" />
+            {/* CSS pack opening animation */}
+            {animPhase === 'animating' && (
+                <div className="pack-anim-overlay">
+                    <div className="pack-scene">
+                        <div className="pack-base">
+                            <div className="pack-stripe" />
+                            <div className="pack-shine" />
+                        </div>
+                        <div className="pack-flap">
+                            <div className="pack-stripe" />
+                            <div className="pack-shine" />
+                        </div>
+                        <div className="pack-seam-line" />
+                        <div className="pack-light-leak" />
+                        <div className="pack-ghost pack-ghost-1" />
+                        <div className="pack-ghost pack-ghost-2" />
+                        <div className="pack-ghost pack-ghost-3" />
+                    </div>
+                </div>
             )}
 
             {/* Result overlay */}
@@ -318,7 +334,6 @@ const Pack = () => {
                                     <img
                                         src={pack.image_url}
                                         alt={pack.name}
-                                        className={animPhase === 'shaking' ? 'pack-shaking' : ''}
                                     />
                                 </div>
                                 <div className="pack-btns">
