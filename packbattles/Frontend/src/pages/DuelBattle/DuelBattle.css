@@ -536,6 +536,236 @@
     text-decoration: underline;
 }
 
+/* ── VS column — lobby pack preview (battle open, not yet revealing) ─────────*/
+
+.db-vs-lobby {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 0.8rem;
+}
+
+.db-lobby-pack-img {
+    width: 110px;
+    height: auto;
+    border-radius: 0.8rem;
+    object-fit: contain;
+    border: 1px solid rgba(163, 91, 255, 0.25);
+    box-shadow: 0 0 18px rgba(163, 91, 255, 0.20);
+}
+
+.db-lobby-pack-name {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin: 0;
+    text-align: center;
+}
+
+.db-lobby-pack-meta {
+    color: rgba(163, 91, 255, 0.75);
+    font-size: 1.15rem;
+    font-weight: 500;
+    margin: 0;
+    text-align: center;
+    white-space: nowrap;
+}
+
+/* ── Battle Join Reveal Animation ────────────────────────────────────────────
+ * Shown only to the joining player after handleJoin() succeeds.
+ * Covers the viewport; auto-tears the pack over ~2 s then disappears.
+ * setBattle() fires after the setTimeout so results stay hidden during anim.
+ */
+
+.db-join-anim-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.88);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    animation: db-join-overlay-lifecycle 2s ease forwards;
+}
+
+@keyframes db-join-overlay-lifecycle {
+    0%   { opacity: 0; }
+    10%  { opacity: 1; }
+    85%  { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+/* ── Pack scene (two-piece split: flap top 20%, lower bottom 80%) ── */
+
+.db-join-pack-scene {
+    position: relative;
+    width: min(270px, 80vw);
+    height: min(420px, 70vh);
+    animation: db-join-pack-in 0.35s ease forwards;
+}
+
+@keyframes db-join-pack-in {
+    from { transform: scale(0.82); opacity: 0; }
+    to   { transform: scale(1);    opacity: 1; }
+}
+
+/* ── Flap (top 20%) — animates upward automatically ── */
+
+.db-join-flap {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 20%;
+    overflow: hidden;
+    background: #1a0a2e;
+    border: 1px solid rgba(163, 91, 255, 0.35);
+    border-bottom: none;
+    border-radius: 4px 4px 0 0;
+    animation: db-join-flap-pull 1.3s 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+    transform-origin: top center;
+}
+
+@keyframes db-join-flap-pull {
+    0%   { transform: translateY(0)      rotate(0deg);   }
+    25%  { transform: translateY(-30px)  rotate(1.2deg); }
+    65%  { transform: translateY(-95px)  rotate(3.2deg); }
+    100% { transform: translateY(-140px) rotate(5.5deg); }
+}
+
+/* ── Lower body (bottom 80%) — stays fixed ── */
+
+.db-join-lower {
+    position: absolute;
+    bottom: 0; left: 0;
+    width: 100%;
+    height: 80%;
+    overflow: hidden;
+    background: #1a0a2e;
+    border: 1px solid rgba(163, 91, 255, 0.35);
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+}
+
+/* ── Pack image — same two-piece clip technique as Pack.jsx ── */
+
+.db-join-img {
+    position: absolute;
+    left: 0;
+    width: min(270px, 80vw);
+    height: min(420px, 70vh);
+    object-fit: contain;
+    object-position: top center;
+    display: block;
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+.db-join-flap .db-join-img  { top: 0;    }
+.db-join-lower .db-join-img { bottom: 0; }
+
+/* ── Fallback stripe (no pack image) ── */
+
+.db-join-stripe {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, #2d1060 0%, #1a0a2e 40%, #3d1280 100%);
+}
+
+/* ── Shine overlay ── */
+
+.db-join-shine {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg,
+        rgba(255, 255, 255, 0.12) 0%,
+        transparent 50%,
+        rgba(255, 255, 255, 0.04) 100%);
+    pointer-events: none;
+}
+
+/* ── Seam line at the 20% split — brightens as flap lifts ── */
+
+.db-join-seam-line {
+    position: absolute;
+    top: 20%;
+    left: 0; right: 0;
+    height: 2px;
+    background: rgba(163, 91, 255, 0.85);
+    box-shadow: 0 0 8px 2px rgba(163, 91, 255, 0.6);
+    animation: db-join-seam-glow 0.7s 0.9s ease forwards;
+    opacity: 0.5;
+}
+
+@keyframes db-join-seam-glow {
+    from { opacity: 0.5; box-shadow: 0 0  8px 2px rgba(163, 91, 255, 0.60); }
+    to   { opacity: 1;   box-shadow: 0 0 22px 9px rgba(163, 91, 255, 0.95); }
+}
+
+/* ── Light-leak burst at the seam ── */
+
+.db-join-light-leak {
+    position: absolute;
+    top: 20%;
+    left: 50%;
+    width: 300px;
+    height: 140px;
+    transform: translate(-50%, -50%) scale(0.2);
+    background: radial-gradient(ellipse at center,
+        rgba(163, 91, 255, 0.75) 0%,
+        rgba(129,  31, 255, 0.45) 42%,
+        transparent 75%);
+    pointer-events: none;
+    opacity: 0;
+    animation: db-join-lightleak-burst 0.7s 0.9s ease forwards;
+}
+
+@keyframes db-join-lightleak-burst {
+    0%   { opacity: 0;   transform: translate(-50%, -50%) scale(0.2);  }
+    50%  { opacity: 0.8; transform: translate(-50%, -50%) scale(0.75); }
+    100% { opacity: 1;   transform: translate(-50%, -50%) scale(1);    }
+}
+
+/* ── "Opening battle pack..." hint text ── */
+
+.db-join-hint {
+    position: absolute;
+    bottom: -3.8rem;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(163, 91, 255, 0.9);
+    font-size: 1.3rem;
+    font-weight: 500;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    animation: db-join-hint-in 0.35s 0.3s ease forwards;
+}
+
+@keyframes db-join-hint-in {
+    from { opacity: 0; transform: translateX(-50%) translateY(4px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0);   }
+}
+
+/* ── Reduced motion: skip animation entirely ── */
+
+@media (prefers-reduced-motion: reduce) {
+    .db-join-anim-overlay,
+    .db-join-pack-scene,
+    .db-join-flap,
+    .db-join-seam-line,
+    .db-join-light-leak,
+    .db-join-hint {
+        animation: none;
+    }
+    .db-join-anim-overlay { opacity: 1; }
+    .db-join-seam-line    { opacity: 1; }
+    .db-join-light-leak   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    .db-join-hint         { opacity: 1; }
+    .db-join-flap         { transform: translateY(-140px) rotate(5.5deg); }
+}
+
 /* ---- Mobile ---- */
 
 @media (max-width: 767px) {

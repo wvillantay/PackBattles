@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import ModeCard from '../../components/ModeCard/ModeCard';
@@ -57,6 +57,7 @@ const DuelBattle = () => {
     const { id }          = useParams();
     const { token, user, updateUser } = useAuth();
     const navigate        = useNavigate();
+    const location        = useLocation();
 
     // ── Fetch / poll state ────────────────────────────────────────────────────
     const [battle,    setBattle]    = useState(null);
@@ -71,7 +72,11 @@ const DuelBattle = () => {
     const [joinError,     setJoinError]     = useState('');
 
     // ── Pack pool for roulette cycling (read-only, fetched once) ─────────────
-    const [packPool, setPackPool] = useState([]);
+    const [packPool,      setPackPool]      = useState([]);
+    const [packImageUrl,  setPackImageUrl]  = useState('');
+
+    // ── Join animation state (joiner only) ───────────────────────────────────
+    const [joinAnimating, setJoinAnimating] = useState(false);
 
     // ── Reveal state: how many cards have fully landed per side ───────────────
     const [revealedCreator,  setRevealedCreator]  = useState(0);
@@ -96,6 +101,11 @@ const DuelBattle = () => {
     const timerPairRef        = useRef(null); // pair-gap / initial-delay timer
     const revealStartedRef    = useRef(false);
     const wasAlreadyCompleted = useRef(false); // true when initial fetch returns completed — skip animation
+    const joinResultRef       = useRef(null);  // stores join API result during pack-open animation
+    const joinAnimTimerRef    = useRef(null);  // setTimeout that fires setBattle after animation
+    // True while the join pack-open animation is playing. Blocks in-flight poll responses
+    // from calling setBattle and bypassing the animation.
+    const joinAnimatingRef    = useRef(false);
 
     // ── Fetch battle, then pack pool ──────────────────────────────────────────
     useEffect(() => {
@@ -115,13 +125,42 @@ const DuelBattle = () => {
                 let pool = [];
                 try {
                     const pr = await axios.get(`${API}/api/packs/${battleData.pack_id}`);
-                    if (active) pool = pr.data.pool.map(e => e.card);
+                    if (active) {
+                        pool = pr.data.pool.map(e => e.card);
+                        setPackImageUrl(pr.data.image_url || '');
+                    }
                 } catch (e) { /* graceful fallback: drawn cards used instead */ }
 
                 if (!active) return;
                 setPackPool(pool);
 
                 if (battleData.status === 'completed') {
+                    if (location?.state?.joinResult) {
+                        // User just joined from the battles list. The navigation state
+                        // carries the signal to show the pack-open animation instead of
+                        // displaying results immediately. Clear the nav state so a
+                        // subsequent reload doesn't re-trigger the animation.
+                        window.history.replaceState({}, '', window.location.href);
+
+                        // Start animation; keep loading=true so the page doesn't render
+                        // the completed battle underneath the overlay. setBattle and
+                        // setLoading are called from the timer when animation ends.
+                        joinResultRef.current    = battleData;
+                        joinAnimatingRef.current = true;
+                        setJoinAnimating(true);
+                        joinAnimTimerRef.current = setTimeout(() => {
+                            if (!active) return;
+                            joinAnimatingRef.current = false;
+                            setJoinAnimating(false);
+                            if (!revealStartedRef.current) {
+                                setBattle(joinResultRef.current);
+                            }
+                            joinResultRef.current = null;
+                            setLoading(false);
+                        }, 2000);
+                        return; // skip normal setBattle / setLoading / polling setup
+                    }
+
                     // Battle was already over when this page opened (history / direct link).
                     // Set refs BEFORE setBattle so the animation useEffect sees
                     // revealStartedRef.current === true and exits without starting timers.
@@ -143,10 +182,27 @@ const DuelBattle = () => {
                                 if (r.data.status === 'completed' || r.data.status === 'cancelled') {
                                     clearInterval(pollingRef.current);
                                     pollingRef.current = null;
-                                    // Guard: if reveal already started (from bot-join/join response
-                                    // that arrived before this in-flight poll), don't overwrite.
-                                    if (!revealStartedRef.current) {
-                                        setBattle(r.data);
+                                    // Guard: don't overwrite if reveal already started OR if the
+                                    // join animation is playing (joinAnimatingRef). An in-flight
+                                    // poll HTTP response can arrive during the 2-second animation
+                                    // window even after clearInterval() has been called.
+                                    if (!revealStartedRef.current && !joinAnimatingRef.current) {
+                                        if (r.data.status === 'completed' && !wasAlreadyCompleted.current) {
+                                            // Fresh completion via poll — show opening animation before releasing
+                                            // the result to the slot-spin reveal (same flow as the joiner path).
+                                            joinResultRef.current    = r.data;
+                                            joinAnimatingRef.current = true;
+                                            setJoinAnimating(true);
+                                            joinAnimTimerRef.current = setTimeout(() => {
+                                                if (!active) return;
+                                                joinAnimatingRef.current = false;
+                                                setJoinAnimating(false);
+                                                if (!revealStartedRef.current) setBattle(joinResultRef.current);
+                                                joinResultRef.current = null;
+                                            }, 2000);
+                                        } else {
+                                            setBattle(r.data);
+                                        }
                                     }
                                 }
                             })
@@ -166,6 +222,8 @@ const DuelBattle = () => {
                 clearInterval(pollingRef.current);
                 pollingRef.current = null;
             }
+            clearTimeout(joinAnimTimerRef.current);
+            joinAnimatingRef.current = false;
         };
     }, [id]);
 
@@ -318,7 +376,18 @@ const DuelBattle = () => {
             // Guard: if an in-flight poll already delivered the completed data
             // and started the reveal, don't overwrite battle (would kill timers).
             if (!revealStartedRef.current) {
-                setBattle(res.data);
+                // Show opening animation before releasing the result to slot-spin,
+                // same as the poll path and the joiner-from-battles-list path.
+                joinResultRef.current    = res.data;
+                joinAnimatingRef.current = true;
+                setIsBotBattling(false);
+                setJoinAnimating(true);
+                joinAnimTimerRef.current = setTimeout(() => {
+                    joinAnimatingRef.current = false;
+                    setJoinAnimating(false);
+                    if (!revealStartedRef.current) setBattle(joinResultRef.current);
+                    joinResultRef.current = null;
+                }, 2000);
             }
         } catch (err) {
             setIsBotBattling(false);
@@ -344,16 +413,78 @@ const DuelBattle = () => {
                 pollingRef.current = null;
             }
             updateUser({ credits: Number(user.credits) - Number(battle?.total_cost) });
-            if (!revealStartedRef.current) {
-                setBattle(res.data);
+
+            // Guard: if an in-flight poll already called setBattle and started the
+            // reveal before this join response arrived, skip the animation — the
+            // slot-spin is already running.
+            if (revealStartedRef.current) {
+                setJoining(false);
+                return;
             }
+
+            // Store result; set the animation ref BEFORE setJoinAnimating so that
+            // any in-flight poll response that lands between now and the animation
+            // finishing is blocked from calling setBattle.
+            joinResultRef.current   = res.data;
+            joinAnimatingRef.current = true;
+            setJoining(false);
+            setJoinAnimating(true);
+            joinAnimTimerRef.current = setTimeout(() => {
+                joinAnimatingRef.current = false;
+                setJoinAnimating(false);
+                if (!revealStartedRef.current) {
+                    setBattle(joinResultRef.current);
+                }
+                joinResultRef.current = null;
+            }, 2000);
         } catch (err) {
             setJoinError(err.response?.data?.error || 'Join failed. Please try again.');
             setJoining(false);
         }
     };
 
+    // ── Join animation overlay helper (reused in both early-return and normal render) ──
+    const renderJoinAnim = () => (
+        <div className="db-join-anim-overlay">
+            <div className="db-join-pack-scene">
+                <div className="db-join-flap">
+                    {packImageUrl
+                        ? <img className="db-join-img db-join-img-top" src={packImageUrl} alt="" draggable={false} />
+                        : <div className="db-join-stripe" />}
+                    <div className="db-join-shine" />
+                </div>
+                <div className="db-join-lower">
+                    {packImageUrl
+                        ? <img className="db-join-img db-join-img-bottom" src={packImageUrl} alt="" draggable={false} />
+                        : <div className="db-join-stripe" />}
+                    <div className="db-join-shine" />
+                </div>
+                <div className="db-join-seam-line" />
+                <div className="db-join-light-leak" />
+                <p className="db-join-hint">Opening battle pack...</p>
+            </div>
+        </div>
+    );
+
     // ── Loading / error early returns ─────────────────────────────────────────
+
+    // Navigated here from battles list after joining: show animation before the
+    // completed battle data is released to the normal render. loading stays true
+    // during this window — the overlay covers the page background.
+    if (loading && joinAnimating) {
+        return (
+            <>
+                <section className="duel-battle">
+                    <div className="packs-bg">
+                        <img className="bar-img" src="./imgs/Rectangle 15.png" alt="" />
+                        <img className="bg-img"  src="./imgs/image 3.png"      alt="" />
+                    </div>
+                </section>
+                {renderJoinAnim()}
+            </>
+        );
+    }
+
     if (loading) {
         return (
             <section className="duel-battle">
@@ -615,12 +746,27 @@ const DuelBattle = () => {
                                             <h4>{fmtPackCoins(totalAwarded)}</h4>
                                             <span>Total Amount Awarded</span>
                                         </div>
-                                    ) : (
+                                    ) : isCompleted ? (
                                         <div className="db-vs-waiting">
                                             <div className="db-waiting-dots">
                                                 <span /><span /><span />
                                             </div>
-                                            <p>{isCompleted ? 'Revealing...' : 'Waiting...'}</p>
+                                            <p>Revealing...</p>
+                                        </div>
+                                    ) : (
+                                        /* Lobby: show what pack is being played */
+                                        <div className="db-vs-lobby">
+                                            {packImageUrl && (
+                                                <img
+                                                    className="db-lobby-pack-img"
+                                                    src={packImageUrl}
+                                                    alt={battle.pack_name}
+                                                />
+                                            )}
+                                            <p className="db-lobby-pack-name">{battle.pack_name}</p>
+                                            <p className="db-lobby-pack-meta">
+                                                ×{battle.pack_quantity}&nbsp;&nbsp;·&nbsp;&nbsp;{fmtPackCoins(battle.total_cost)}
+                                            </p>
                                         </div>
                                     )}
                                 </div>
@@ -711,6 +857,9 @@ const DuelBattle = () => {
 
                 </div>
             </section>
+
+            {/* BATTLE OPENING ANIMATION OVERLAY — all players see this before slot-spin reveal */}
+            {joinAnimating && renderJoinAnim()}
 
             {/* BATTLE OVER POPUP — only after full reveal */}
             {showPopup && revealDone && (

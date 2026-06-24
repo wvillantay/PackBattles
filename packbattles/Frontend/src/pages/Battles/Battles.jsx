@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -96,13 +96,22 @@ const Battles = () => {
                 {},
                 { headers: { Authorization: `Bearer ${token}` } },
             )
-            .then(() => {
+            .then(res => {
                 updateUser({ credits: Number(user.credits) - Number(joiningBattle.total_cost) });
-                navigate('/duel-battle/' + joiningBattle.id);
+                // Pass joinResult in navigation state so DuelBattle shows the pack-open
+                // animation instead of jumping straight to the completed results screen.
+                navigate('/duel-battle/' + joiningBattle.id, { state: { joinResult: true } });
             })
             .catch(err => setJoinError(err.response?.data?.error || 'Failed to join battle.'))
             .finally(() => setJoining(false));
     };
+
+    // Map pack_id → pack object so battle rows can show the pack image without extra fetches.
+    const packMap = useMemo(() => {
+        const m = {};
+        packs.forEach(p => { m[p.id] = p; });
+        return m;
+    }, [packs]);
 
     const sortedPacks = [...packs].sort((a, b) => {
         if (packSort === 'price-asc')  return a.cost - b.cost;
@@ -175,6 +184,14 @@ const Battles = () => {
                                         <tr key={battle.id}>
                                             <td><p className="round">{battle.creator_name}</p></td>
                                             <td>
+                                                {packMap[battle.pack_id]?.image_url && (
+                                                    <div className="bt-card">
+                                                        <img
+                                                            src={packMap[battle.pack_id].image_url}
+                                                            alt={battle.pack_name}
+                                                        />
+                                                    </div>
+                                                )}
                                                 <p>
                                                     {battle.pack_name}
                                                     {battle.pack_quantity > 1 && (
@@ -336,6 +353,20 @@ const Battles = () => {
                             </button>
                         </div>
 
+                        {packMap[joiningBattle?.pack_id]?.image_url && (
+                            <div className="bt-join-pack-preview">
+                                <img
+                                    src={packMap[joiningBattle.pack_id].image_url}
+                                    alt={joiningBattle.pack_name}
+                                />
+                                <div className="bt-join-pack-info">
+                                    <p className="bt-join-pack-name">{joiningBattle.pack_name}</p>
+                                    <p className="bt-join-pack-qty">
+                                        ×{joiningBattle.pack_quantity}&nbsp;{joiningBattle.pack_quantity === 1 ? 'pack' : 'packs'}
+                                    </p>
+                                </div>
+                            </div>
+                        )}
                         <div className="bt-modal-opponent">
                             <span>Creator: <strong>{joiningBattle.creator_name}</strong></span>
                             <span>Pack: <strong>{joiningBattle.pack_name}</strong></span>

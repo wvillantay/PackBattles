@@ -650,6 +650,47 @@
     color: #fff;
 }
 
+/* ---- join modal pack image preview ---- */
+
+.bt-join-pack-preview {
+    display: flex;
+    align-items: center;
+    gap: 1.8rem;
+    padding: 1.5rem 2rem;
+    border-radius: 1.2rem;
+    background: rgba(163, 91, 255, 0.07);
+    border: 1px solid rgba(163, 91, 255, 0.22);
+    margin-bottom: 1.8rem;
+}
+
+.bt-join-pack-preview img {
+    width: 80px;
+    height: auto;
+    border-radius: 0.8rem;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.bt-join-pack-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.bt-join-pack-name {
+    color: #fff;
+    font-size: 1.7rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.bt-join-pack-qty {
+    color: rgba(163, 91, 255, 0.85);
+    font-size: 1.3rem;
+    font-weight: 500;
+    margin: 0;
+}
+
 /* ---- inline quantity badge in battle list ---- */
 
 .bt-qty-badge {
