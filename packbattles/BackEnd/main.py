@@ -2424,8 +2424,8 @@ def activity_feed():
 
     events = []
 
-    # Upgrades
-    for r in mongo.db.upgrade_log.find({}).sort("created_at", -1).limit(limit):
+    # Upgrades — only successful ones on the public feed
+    for r in mongo.db.upgrade_log.find({"result": "success"}).sort("created_at", -1).limit(limit):
         if not r.get("created_at"):
             continue
         events.append({
@@ -2515,7 +2515,7 @@ def activity_feed():
         ts = e["ts"].isoformat()
 
         if t == "upgrade":
-            outcome = "upgraded" if d.get("result") == "win" else "failed to upgrade"
+            outcome = "upgraded" if d.get("result") == "success" else "attempted to upgrade"
             out.append({"type": t, "user": _uname(e["user_id"]),
                         "text": f"{outcome} {d['input']} → {d['target']}",
                         "result": d.get("result"), "ts": ts})

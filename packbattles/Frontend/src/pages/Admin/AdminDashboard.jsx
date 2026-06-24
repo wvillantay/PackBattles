@@ -51,6 +51,16 @@ const AdminDashboard = () => {
                         <p>Review pending shipment requests. Ship or reject with one click.</p>
                         <span className="admin-card-cta">Review Requests →</span>
                     </Link>
+                    <Link to="/admin/upgrade-logs" className="admin-card">
+                        <h3>Upgrade Logs</h3>
+                        <p>All upgrade attempts with success/fail, odds, and provably fair verification.</p>
+                        <span className="admin-card-cta">View Upgrade Logs →</span>
+                    </Link>
+                    <Link to="/admin/exchange-logs" className="admin-card">
+                        <h3>Exchange Logs</h3>
+                        <p>Full history of card trades — offered and received cards with values.</p>
+                        <span className="admin-card-cta">View Exchange Logs →</span>
+                    </Link>
                 </div>
             </div>
         </section>

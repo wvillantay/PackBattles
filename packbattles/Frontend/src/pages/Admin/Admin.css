@@ -2,7 +2,7 @@
 
 .admin-page {
     position: relative;
-    padding: 6rem 0 8rem;
+    padding: 10rem 0 8rem;
     min-height: 100vh;
     isolation: isolate;
 }
@@ -107,6 +107,7 @@
 .admin-card h3 {
     font-size: 2rem;
     font-weight: 700;
+    line-height: 1.25;
     color: #fff;
     margin: 0;
 }
@@ -1590,4 +1591,58 @@
     gap: 0.8rem;
     padding-top: 0.4rem;
     border-top: 1px solid rgba(255,255,255,0.07);
+}
+
+/* ── Upgrade Logs — card name pair ─────────────────────────────────────── */
+
+.admin-ul-cards {
+    color: #fff !important;
+    font-weight: 500 !important;
+    white-space: normal !important;
+    max-width: 300px;
+    line-height: 1.4;
+}
+
+.admin-ul-arrow {
+    color: #A35BFF;
+    font-weight: 700;
+}
+
+/* ── Provably Fair Seeds panel (AdminUpgradeLogs expandable row) ─────────── */
+
+.admin-seeds-panel {
+    margin: 0 0 0.4rem;
+}
+
+.admin-seeds-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 0.7rem;
+    margin-top: 0.8rem;
+}
+
+.admin-seeds-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    padding: 0.8rem 1rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 0.8rem;
+}
+
+.admin-seeds-key {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.38);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.admin-seeds-val {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.72);
+    word-break: break-all;
+    line-height: 1.4;
 }
