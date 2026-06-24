@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import OwlCarousel from 'react-owl-carousel';
@@ -38,9 +38,12 @@ const carouselOptions = {
     },
 };
 
+const TEAR_THRESHOLD = 75; // px of upward drag needed to complete the pack tear
+
 // Spin one slot fast→medium→slow, pause on real card, then land.
 // setSlots uses the functional updater so no stale-closure issues.
-const spinSlot = (slotIndex, realCard, poolCards, setSlots) => {
+// isActive() returns false when Skip Reveal is triggered — causes the spin to abort cleanly.
+const spinSlot = (slotIndex, realCard, poolCards, setSlots, isActive = () => true) => {
     return new Promise(resolve => {
         const rand = () => poolCards[Math.floor(Math.random() * poolCards.length)];
 
@@ -54,6 +57,7 @@ const spinSlot = (slotIndex, realCard, poolCards, setSlots) => {
         let frameInPhase = 0;
 
         const update = (displayCard, state, frameDelta) => {
+            if (!isActive()) return;
             setSlots(prev => {
                 const next = [...prev];
                 next[slotIndex] = {
@@ -68,6 +72,8 @@ const spinSlot = (slotIndex, realCard, poolCards, setSlots) => {
         update(rand(), 'spinning', 1);
 
         const tick = () => {
+            if (!isActive()) { resolve(); return; }
+
             frameInPhase++;
 
             if (frameInPhase >= phases[phaseIdx].count) {
@@ -78,6 +84,7 @@ const spinSlot = (slotIndex, realCard, poolCards, setSlots) => {
                     // Dramatic pause showing real card still spinning
                     update(realCard, 'spinning', 1);
                     setTimeout(() => {
+                        if (!isActive()) { resolve(); return; }
                         update(realCard, 'landed', 0);
                         setTimeout(resolve, 320);
                     }, 210);
@@ -105,10 +112,21 @@ const Pack = () => {
     const [openError, setOpenError] = useState('');
     const [result,    setResult]    = useState(null);
 
-    // Animation phases: 'idle' | 'animating' | 'revealing' | 'done'
+    // Animation phases: 'idle' | 'opening' | 'torn' | 'revealing' | 'done'
     const [animPhase, setAnimPhase] = useState('idle');
     // Each slot: { state: 'waiting'|'spinning'|'landed', displayCard: null|cardObj, frame: 0 }
-    const [slots, setSlots] = useState([]);
+    const [slots,         setSlots]         = useState([]);
+    const [packImgFailed, setPackImgFailed] = useState(false);
+
+    // Refs for drag coordination — avoid React re-renders on every pointermove
+    const flapRef        = useRef(null);
+    const lightLeakRef   = useRef(null);
+    const isDraggingRef  = useRef(false);
+    const startYRef      = useRef(0);
+    const apiResolveRef  = useRef(null);  // resolves apiPromise when API returns
+    const tearResolveRef = useRef(null);  // resolves tearPromise when drag completes
+    const skipRevealRef  = useRef(false); // set true by Skip Reveal to abort in-progress roulette
+    const resultRef      = useRef(null);  // stores API result so skip handler can access it
 
     useEffect(() => {
         if (!packId) {
@@ -122,38 +140,121 @@ const Pack = () => {
             .finally(() => setLoading(false));
     }, [packId]);
 
+    // Called when drag threshold is reached or user clicks the pack.
+    // Idempotent: the tearResolveRef guard prevents double-firing.
+    const completeTear = () => {
+        if (!tearResolveRef.current) return;
+        isDraggingRef.current = false;
+        if (lightLeakRef.current) {
+            lightLeakRef.current.style.transition = '';
+            lightLeakRef.current.style.opacity    = '1';
+            lightLeakRef.current.style.transform  = 'translate(-50%, -50%) scale(1)';
+        }
+        if (flapRef.current) {
+            flapRef.current.style.transition = '';
+            flapRef.current.style.transform  = '';
+        }
+        setAnimPhase('torn');
+        tearResolveRef.current();
+        tearResolveRef.current = null;
+    };
+
+    const onFlapPointerDown = (e) => {
+        e.currentTarget.setPointerCapture(e.pointerId); // track drag even if pointer leaves element
+        isDraggingRef.current = true;
+        startYRef.current     = e.clientY;
+    };
+
+    const onFlapPointerMove = (e) => {
+        if (!isDraggingRef.current) return;
+        const dy       = Math.max(0, startYRef.current - e.clientY); // upward only
+        const clamped  = Math.min(dy, 130);
+        const progress = Math.min(clamped / TEAR_THRESHOLD, 1);
+
+        if (flapRef.current) {
+            flapRef.current.style.transform =
+                `translateY(-${clamped}px) rotate(${clamped * 0.04}deg)`;
+        }
+        if (lightLeakRef.current) {
+            lightLeakRef.current.style.opacity   = progress;
+            lightLeakRef.current.style.transform =
+                `translate(-50%, -50%) scale(${0.3 + progress * 0.7})`;
+        }
+
+        if (clamped >= TEAR_THRESHOLD) {
+            completeTear();
+        }
+    };
+
+    const onFlapPointerUp = (e) => {
+        if (!isDraggingRef.current) return;
+        isDraggingRef.current = false;
+        const dy = Math.max(0, startYRef.current - e.clientY);
+
+        // Tiny movement (<5 px) = treat as a tap; let the click handler complete the tear
+        if (dy < 5) return;
+
+        if (dy >= TEAR_THRESHOLD) { completeTear(); return; }
+
+        // Partial drag released before threshold — snap the flap back
+        if (flapRef.current) {
+            flapRef.current.style.transition = 'transform 0.3s ease';
+            flapRef.current.style.transform  = '';
+            setTimeout(() => { if (flapRef.current) flapRef.current.style.transition = ''; }, 300);
+        }
+        if (lightLeakRef.current) {
+            lightLeakRef.current.style.transition = 'opacity 0.3s, transform 0.3s';
+            lightLeakRef.current.style.opacity    = '0';
+            lightLeakRef.current.style.transform  = 'translate(-50%, -50%) scale(0.3)';
+            setTimeout(() => { if (lightLeakRef.current) lightLeakRef.current.style.transition = ''; }, 300);
+        }
+    };
+
     const handleOpen = async () => {
         setOpenError('');
         setSlots([]);
+        setPackImgFailed(false);
+        isDraggingRef.current  = false;
+        apiResolveRef.current  = null;
+        tearResolveRef.current = null;
+        skipRevealRef.current  = false;
+        resultRef.current      = null;
 
-        // CSS animation starts immediately; API fires in parallel.
-        // Promise.all ensures real cards are never shown before the backend returns results.
-        // If the API is slower than 2500 ms the animation holds its end state until it resolves.
+        // Two promises gate the reveal: one for the API result, one for the user tearing the pack.
+        // Promise.all ensures real cards are never shown until BOTH conditions are satisfied.
+        const apiPromise  = new Promise(r => { apiResolveRef.current  = r; });
+        const tearPromise = new Promise(r => { tearResolveRef.current = r; });
+
         const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        setAnimPhase('animating');
+        if (reducedMotion) {
+            // Skip drag interaction — immediately open the pack and wait for the API
+            setAnimPhase('torn');
+            tearResolveRef.current();
+            tearResolveRef.current = null;
+        } else {
+            setAnimPhase('opening');
+        }
 
-        const [, apiResult] = await Promise.all([
-            new Promise(r => setTimeout(r, reducedMotion ? 0 : 2500)),
-            axios
-                .post(
-                    `${API}/api/packs/${packId}/open`,
-                    {},
-                    { headers: { Authorization: `Bearer ${token}` } },
-                )
-                .then(res => ({ ok: true,  data: res.data }))
-                .catch(err => ({ ok: false, err })),
-        ]);
+        axios
+            .post(`${API}/api/packs/${packId}/open`, {}, { headers: { Authorization: `Bearer ${token}` } })
+            .then(res => { apiResolveRef.current?.({ ok: true,  data: res.data }); })
+            .catch(err => { apiResolveRef.current?.({ ok: false, err }); });
+
+        const [apiResult] = await Promise.all([apiPromise, tearPromise]);
 
         if (!apiResult.ok) {
-            setOpenError(apiResult.err.response?.data?.error || 'Failed to open pack. Try again.');
+            setOpenError(apiResult.err?.response?.data?.error || 'Failed to open pack. Try again.');
             setAnimPhase('idle');
             return;
         }
 
         updateUser({ credits: apiResult.data.credits_remaining });
+        resultRef.current = apiResult.data;
         setResult(apiResult.data);
 
-        // Build decoy pool from pack.pool (already in state — no extra API call)
+        // Brief hold so ghost silhouettes are visible before the roulette mounts
+        await new Promise(r => setTimeout(r, 600));
+
         const cards     = apiResult.data.cards_received;
         const poolCards = (pack?.pool?.length > 0)
             ? pack.pool.map(e => e.card)
@@ -163,12 +264,30 @@ const Pack = () => {
         setAnimPhase('revealing');
 
         for (let i = 0; i < cards.length; i++) {
-            await spinSlot(i, cards[i], poolCards, setSlots);
+            if (skipRevealRef.current) break;
+            await spinSlot(i, cards[i], poolCards, setSlots, () => !skipRevealRef.current);
+            if (skipRevealRef.current) break;
             if (i < cards.length - 1) {
                 await new Promise(r => setTimeout(r, 140));
             }
         }
 
+        // Skip handler may have already set 'done' and landed all cards
+        if (!skipRevealRef.current) {
+            setAnimPhase('done');
+        }
+    };
+
+    // Instantly settles all cards to their backend-returned state, skipping animation.
+    // Safe to call any time during 'revealing'; idempotent via skipRevealRef guard.
+    const handleSkipReveal = () => {
+        if (skipRevealRef.current || !resultRef.current) return;
+        skipRevealRef.current = true;
+        setSlots(resultRef.current.cards_received.map(card => ({
+            state: 'landed',
+            displayCard: card,
+            frame: 0,
+        })));
         setAnimPhase('done');
     };
 
@@ -176,6 +295,12 @@ const Pack = () => {
         setResult(null);
         setSlots([]);
         setAnimPhase('idle');
+        setPackImgFailed(false);
+        skipRevealRef.current  = false;
+        resultRef.current      = null;
+        tearResolveRef.current = null;
+        apiResolveRef.current  = null;
+        isDraggingRef.current  = false;
     };
 
     // ── Loading / error early returns ─────────────────────────────────────────
@@ -219,23 +344,65 @@ const Pack = () => {
 
     return (
         <>
-            {/* CSS pack opening animation */}
-            {animPhase === 'animating' && (
+            {/* Interactive pack opening overlay */}
+            {(animPhase === 'opening' || animPhase === 'torn') && (
                 <div className="pack-anim-overlay">
+                    {/*
+                     * Clicking pack-scene (flap or lower body) opens the pack.
+                     * Clicking the empty dark background does nothing — no onClick on the overlay.
+                     */}
                     <div className="pack-scene">
-                        <div className="pack-base">
-                            <div className="pack-stripe" />
+                        {/* Drag hint — visible only while pack is waiting to be opened */}
+                        {animPhase === 'opening' && (
+                            <div className="pack-open-hint">↑ Pull to open</div>
+                        )}
+                        {/* Top flap — draggable upward during 'opening' */}
+                        <div
+                            ref={flapRef}
+                            className={`pack-flap${animPhase === 'torn' ? ' pack-flap--torn' : ''}`}
+                            onPointerDown={animPhase === 'opening' ? onFlapPointerDown : undefined}
+                            onPointerMove={animPhase === 'opening' ? onFlapPointerMove : undefined}
+                            onPointerUp={animPhase === 'opening'   ? onFlapPointerUp   : undefined}
+                            onPointerCancel={animPhase === 'opening' ? onFlapPointerUp : undefined}
+                        >
+                            {pack.image_url && !packImgFailed
+                                ? <img
+                                    className="pack-img-half pack-img-top"
+                                    src={pack.image_url}
+                                    alt=""
+                                    draggable={false}
+                                    onError={() => setPackImgFailed(true)}
+                                  />
+                                : <div className="pack-stripe" />}
                             <div className="pack-shine" />
                         </div>
-                        <div className="pack-flap">
-                            <div className="pack-stripe" />
+                        {/* Lower body — stationary, reveals gap as flap moves */}
+                        <div className="pack-lower">
+                            {pack.image_url && !packImgFailed
+                                ? <img
+                                    className="pack-img-half pack-img-bottom"
+                                    src={pack.image_url}
+                                    alt=""
+                                    draggable={false}
+                                  />
+                                : <div className="pack-stripe" />}
                             <div className="pack-shine" />
                         </div>
                         <div className="pack-seam-line" />
-                        <div className="pack-light-leak" />
-                        <div className="pack-ghost pack-ghost-1" />
-                        <div className="pack-ghost pack-ghost-2" />
-                        <div className="pack-ghost pack-ghost-3" />
+                        {/* Light leak — opacity/scale driven by JS during drag, full when torn */}
+                        <div
+                            ref={lightLeakRef}
+                            className="pack-light-leak"
+                            style={{ opacity: 0, transform: 'translate(-50%, -50%) scale(0.3)' }}
+                        />
+                        {/* Ghost silhouettes mount only after tear is complete */}
+                        {animPhase === 'torn' && (
+                            <>
+                                <div className="pack-ghost pack-ghost-1" />
+                                <div className="pack-ghost pack-ghost-2" />
+                                <div className="pack-ghost pack-ghost-3" />
+                            </>
+                        )}
                     </div>
                 </div>
             )}
@@ -304,6 +471,12 @@ const Pack = () => {
                                 );
                             })}
                         </div>
+
+                        {animPhase === 'revealing' && (
+                            <button className="skip-reveal-btn" onClick={handleSkipReveal}>
+                                Skip Reveal
+                            </button>
+                        )}
 
                         {animPhase === 'done' && (
                             <div className="pack-result-actions">
