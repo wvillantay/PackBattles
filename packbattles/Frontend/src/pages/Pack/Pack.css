@@ -823,6 +823,111 @@
     color: #fff;
 }
 
+/* ── Result-rarity glow variants ────────────────────────────────────────────
+ * Applied as .pack-scene--<rarity> once the open-pack API result returns.
+ * Source: highest rarity in apiResult.data.cards_received — the actual pull.
+ * No class = API still pending = base blue/cyan glow.
+ *
+ * Three layers of glow per tier:
+ *   1. Outer aura  — filter: drop-shadow on pack-scene (wraps composite shape)
+ *   2. Pack border — box-shadow on pack-flap + pack-lower edges
+ *   3. Seam/leak   — brighter seam-line + larger light-leak
+ */
+
+/* common — soft grey/white outer aura, intensity driven by --open-progress (0→1) */
+.pack-scene--common {
+    filter: drop-shadow(0 0 calc(24px * var(--open-progress, 0)) rgba(200,210,220, calc(0.85 * var(--open-progress, 0))))
+            drop-shadow(0 0 calc(55px * var(--open-progress, 0)) rgba(200,210,220, calc(0.40 * var(--open-progress, 0))));
+    transition: filter 0.3s ease;
+}
+.pack-scene--common .pack-flap,
+.pack-scene--common .pack-lower {
+    border-color: rgba(200, 210, 220, 0.60);
+    box-shadow: 0 0 calc(12px * var(--open-progress, 0)) rgba(200,210,220,0.40),
+                inset 0 0 calc(8px * var(--open-progress, 0)) rgba(200,210,220,0.10);
+    transition: box-shadow 0.3s ease;
+}
+.pack-scene--common .pack-seam-line {
+    background: rgba(220, 225, 235, 0.90);
+    box-shadow: 0 0 calc(14px * var(--open-progress, 0)) calc(5px * var(--open-progress, 0)) rgba(200,210,220,0.75);
+}
+.pack-scene--common .pack-light-leak {
+    width: 290px; height: 155px;
+    background: radial-gradient(ellipse at center,
+        rgba(220,225,235,0.65) 0%, rgba(160,170,185,0.38) 45%, transparent 75%);
+}
+
+/* uncommon — cyan/blue outer aura */
+.pack-scene--uncommon {
+    filter: drop-shadow(0 0 calc(28px * var(--open-progress, 0)) rgba(96,165,250, calc(0.95 * var(--open-progress, 0))))
+            drop-shadow(0 0 calc(68px * var(--open-progress, 0)) rgba(0,229,255, calc(0.52 * var(--open-progress, 0))));
+    transition: filter 0.3s ease;
+}
+.pack-scene--uncommon .pack-flap,
+.pack-scene--uncommon .pack-lower {
+    border-color: rgba(96, 165, 250, 0.70);
+    box-shadow: 0 0 calc(14px * var(--open-progress, 0)) rgba(96,165,250,0.50),
+                inset 0 0 calc(8px * var(--open-progress, 0)) rgba(0,229,255,0.14);
+    transition: box-shadow 0.3s ease;
+}
+.pack-scene--uncommon .pack-seam-line {
+    background: rgba(96, 165, 250, 1.0);
+    box-shadow: 0 0 calc(18px * var(--open-progress, 0)) calc(7px * var(--open-progress, 0)) rgba(96,165,250,0.75);
+}
+.pack-scene--uncommon .pack-light-leak {
+    width: 300px; height: 160px;
+    background: radial-gradient(ellipse at center,
+        rgba(96,165,250,0.72) 0%, rgba(0,229,255,0.48) 40%, transparent 75%);
+}
+
+/* rare — strong purple outer aura */
+.pack-scene--rare {
+    filter: drop-shadow(0 0 calc(32px * var(--open-progress, 0)) rgba(163,91,255, calc(1.00 * var(--open-progress, 0))))
+            drop-shadow(0 0 calc(80px * var(--open-progress, 0)) rgba(163,91,255, calc(0.62 * var(--open-progress, 0))));
+    transition: filter 0.3s ease;
+}
+.pack-scene--rare .pack-flap,
+.pack-scene--rare .pack-lower {
+    border-color: rgba(163, 91, 255, 0.80);
+    box-shadow: 0 0 calc(18px * var(--open-progress, 0)) rgba(163,91,255,0.60),
+                inset 0 0 calc(12px * var(--open-progress, 0)) rgba(163,91,255,0.18);
+    transition: box-shadow 0.3s ease;
+}
+.pack-scene--rare .pack-seam-line {
+    background: rgba(163, 91, 255, 1.0);
+    box-shadow: 0 0 calc(24px * var(--open-progress, 0)) calc(10px * var(--open-progress, 0)) rgba(163,91,255,0.88);
+}
+.pack-scene--rare .pack-light-leak {
+    width: 320px; height: 170px;
+    background: radial-gradient(ellipse at center,
+        rgba(163,91,255,0.82) 0%, rgba(129,31,255,0.58) 40%, transparent 75%);
+}
+
+/* ultra_rare — strong purple/gold outer aura */
+.pack-scene--ultra_rare {
+    filter: drop-shadow(0 0 calc(34px * var(--open-progress, 0)) rgba(245,158,11, calc(0.95 * var(--open-progress, 0))))
+            drop-shadow(0 0 calc(72px * var(--open-progress, 0)) rgba(163,91,255, calc(0.70 * var(--open-progress, 0))))
+            drop-shadow(0 0 calc(110px * var(--open-progress, 0)) rgba(245,158,11, calc(0.38 * var(--open-progress, 0))));
+    transition: filter 0.3s ease;
+}
+.pack-scene--ultra_rare .pack-flap,
+.pack-scene--ultra_rare .pack-lower {
+    border-color: rgba(245, 158, 11, 0.75);
+    box-shadow: 0 0 calc(20px * var(--open-progress, 0)) rgba(245,158,11,0.55),
+                0 0 calc(40px * var(--open-progress, 0)) rgba(163,91,255,0.40),
+                inset 0 0 calc(14px * var(--open-progress, 0)) rgba(245,158,11,0.18);
+    transition: box-shadow 0.3s ease;
+}
+.pack-scene--ultra_rare .pack-seam-line {
+    background: linear-gradient(90deg, rgba(163,91,255,1.0) 0%, rgba(245,158,11,1.0) 100%);
+    box-shadow: 0 0 calc(28px * var(--open-progress, 0)) calc(11px * var(--open-progress, 0)) rgba(210,110,20,0.85);
+}
+.pack-scene--ultra_rare .pack-light-leak {
+    width: 340px; height: 180px;
+    background: radial-gradient(ellipse at center,
+        rgba(245,158,11,0.78) 0%, rgba(163,91,255,0.62) 40%, transparent 75%);
+}
+
 /* Reduced motion: disable animations; show the pack in its static open state */
 @media (prefers-reduced-motion: reduce) {
     .pack-anim-overlay * {

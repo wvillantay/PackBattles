@@ -117,6 +117,8 @@ const Pack = () => {
     // Each slot: { state: 'waiting'|'spinning'|'landed', displayCard: null|cardObj, frame: 0 }
     const [slots,         setSlots]         = useState([]);
     const [packImgFailed, setPackImgFailed] = useState(false);
+    // null = API not yet returned (neutral glow); string = highest rarity from actual pulled result
+    const [resultRarity,  setResultRarity]  = useState(null);
 
     // Refs for drag coordination — avoid React re-renders on every pointermove
     const flapRef        = useRef(null);
@@ -127,6 +129,7 @@ const Pack = () => {
     const tearResolveRef = useRef(null);  // resolves tearPromise when drag completes
     const skipRevealRef  = useRef(false); // set true by Skip Reveal to abort in-progress roulette
     const resultRef      = useRef(null);  // stores API result so skip handler can access it
+    const sceneRef       = useRef(null);  // for setting --open-progress CSS custom property
 
     useEffect(() => {
         if (!packId) {
@@ -154,6 +157,7 @@ const Pack = () => {
             flapRef.current.style.transition = '';
             flapRef.current.style.transform  = '';
         }
+        sceneRef.current?.style.setProperty('--open-progress', '1');
         setAnimPhase('torn');
         tearResolveRef.current();
         tearResolveRef.current = null;
@@ -180,6 +184,7 @@ const Pack = () => {
             lightLeakRef.current.style.transform =
                 `translate(-50%, -50%) scale(${0.3 + progress * 0.7})`;
         }
+        sceneRef.current?.style.setProperty('--open-progress', String(progress));
 
         if (clamped >= TEAR_THRESHOLD) {
             completeTear();
@@ -208,12 +213,14 @@ const Pack = () => {
             lightLeakRef.current.style.transform  = 'translate(-50%, -50%) scale(0.3)';
             setTimeout(() => { if (lightLeakRef.current) lightLeakRef.current.style.transition = ''; }, 300);
         }
+        sceneRef.current?.style.setProperty('--open-progress', '0');
     };
 
     const handleOpen = async () => {
         setOpenError('');
         setSlots([]);
         setPackImgFailed(false);
+        setResultRarity(null);
         isDraggingRef.current  = false;
         apiResolveRef.current  = null;
         tearResolveRef.current = null;
@@ -237,7 +244,18 @@ const Pack = () => {
 
         axios
             .post(`${API}/api/packs/${packId}/open`, {}, { headers: { Authorization: `Bearer ${token}` } })
-            .then(res => { apiResolveRef.current?.({ ok: true,  data: res.data }); })
+            .then(res => {
+                // Compute highest rarity from the actual pulled cards and apply glow immediately.
+                // This updates the seam/light-leak color while the user may still be dragging.
+                const RANK = { common: 0, uncommon: 1, rare: 2, ultra_rare: 3 };
+                const cards = res.data.cards_received || [];
+                const top = cards.reduce(
+                    (best, c) => (RANK[c.rarity] ?? 0) > (RANK[best] ?? 0) ? c.rarity : best,
+                    'common'
+                );
+                setResultRarity(top);
+                apiResolveRef.current?.({ ok: true, data: res.data });
+            })
             .catch(err => { apiResolveRef.current?.({ ok: false, err }); });
 
         const [apiResult] = await Promise.all([apiPromise, tearPromise]);
@@ -296,6 +314,7 @@ const Pack = () => {
         setSlots([]);
         setAnimPhase('idle');
         setPackImgFailed(false);
+        setResultRarity(null);
         skipRevealRef.current  = false;
         resultRef.current      = null;
         tearResolveRef.current = null;
@@ -351,7 +370,7 @@ const Pack = () => {
                      * Clicking pack-scene (flap or lower body) opens the pack.
                      * Clicking the empty dark background does nothing — no onClick on the overlay.
                      */}
-                    <div className="pack-scene">
+                    <div ref={sceneRef} className={`pack-scene${resultRarity ? ` pack-scene--${resultRarity}` : ''}`}>
                         {/* Drag hint — visible only while pack is waiting to be opened */}
                         {animPhase === 'opening' && (
                             <div className="pack-open-hint">↑ Pull to open</div>
